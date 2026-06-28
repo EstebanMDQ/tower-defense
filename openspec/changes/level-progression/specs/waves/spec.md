@@ -1,4 +1,11 @@
-## MODIFIED Requirements
+## REMOVED Requirements
+
+### Requirement: Endless wave progression
+
+**Reason**: replaced by level-grouped progression (waves are now grouped into levels
+with a continuous global difficulty index).
+
+## ADDED Requirements
 
 ### Requirement: Level-grouped wave progression
 
@@ -12,6 +19,8 @@ alongside the per-level wave number used for display and enemy count.
 - **WHEN** a wave is completed
 - **THEN** the per-level wave advances; after the last wave of a level the next level
   begins at wave 1, while the global wave index keeps increasing with no upper bound
+
+## MODIFIED Requirements
 
 ### Requirement: Wave enemy count scaling
 
