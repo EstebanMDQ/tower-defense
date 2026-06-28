@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { GRID, tileToPixel, pixelToTile } from "../config/grid";
+import { GRID, tileToPixel, pixelToTile, inBounds } from "../config/grid";
 import { generateMap, type GameMap } from "../systems/PathGenerator";
 import { randomSeed } from "../systems/Rng";
 import { Economy } from "../systems/Economy";
@@ -8,6 +8,7 @@ import { TowerManager } from "../systems/TowerManager";
 import { WaveManager } from "../systems/WaveManager";
 import { ENEMIES } from "../config/enemies";
 import { TOWERS, type TowerType } from "../config/towers";
+import type { Tower } from "../entities/Tower";
 import type { TileCoord, Vec2 } from "../types";
 
 /**
@@ -24,6 +25,11 @@ export class GameScene extends Phaser.Scene {
   waveManager!: WaveManager;
 
   selectedTowerType: TowerType = "machineGun";
+  /** Tower the player tapped, shown in the HUD upgrade panel. */
+  selectedTower: Tower | null = null;
+  /** Gameplay speed controls (used by the HUD). */
+  paused = false;
+  speedFactor = 1;
 
   private dynamicGfx!: Phaser.GameObjects.Graphics;
   private hoverTile: TileCoord | null = null;
@@ -48,6 +54,16 @@ export class GameScene extends Phaser.Scene {
     );
     this.waveManager = new WaveManager(this.enemyManager, this.economy);
 
+    // Reset transient state (important on restart).
+    this.selectedTower = null;
+    this.paused = false;
+    this.speedFactor = 1;
+
+    this.economy.onGameOver(() => {
+      this.scene.stop("HUD");
+      this.scene.start("GameOver", { wave: this.waveManager.getWave() });
+    });
+
     this.scene.launch("HUD");
 
     this.drawStatic();
@@ -56,7 +72,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    this.step(delta / 1000);
+    const dt = this.paused ? 0 : (delta / 1000) * this.speedFactor;
+    this.step(dt);
   }
 
   private step(dt: number): void {
@@ -82,13 +99,18 @@ export class GameScene extends Phaser.Scene {
     kb?.on("keydown-SPACE", () => this.waveManager.startWave());
   }
 
-  /** Tap an existing tower to upgrade it, or a buildable tile to place. */
+  /** Tap an existing tower to select it (HUD shows upgrade), or a buildable
+   *  tile to place the currently selected tower type. Taps in the HUD bar map
+   *  to out-of-bounds tiles and are ignored here. */
   private handleTap(tile: TileCoord): void {
+    // Ignore taps outside the play field (e.g. the HUD bar handles its own).
+    if (!inBounds(tile.col, tile.row)) return;
     const existing = this.towerManager.towerAt(tile);
     if (existing) {
-      this.towerManager.upgrade(existing);
+      this.selectedTower = existing;
       return;
     }
+    this.selectedTower = null;
     this.towerManager.place(this.selectedTowerType, tile);
   }
 
@@ -145,6 +167,10 @@ export class GameScene extends Phaser.Scene {
   private drawTowers(g: Phaser.GameObjects.Graphics): void {
     const s = GRID.tileSize / 2 - 5;
     for (const tower of this.towerManager.getTowers()) {
+      if (tower === this.selectedTower) {
+        g.lineStyle(2, 0xffffff, 0.5);
+        g.strokeCircle(tower.x, tower.y, tower.rangePx);
+      }
       g.fillStyle(TOWERS[tower.type].color, 1);
       g.fillRect(tower.x - s, tower.y - s, s * 2, s * 2);
       // Level pips.

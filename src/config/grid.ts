@@ -12,9 +12,13 @@ export const GRID = {
   tileSize: 48,
 } as const;
 
-/** Design resolution derived from the grid (portrait). */
+/** Play-field resolution derived from the grid (portrait). */
 export const DESIGN_WIDTH = GRID.cols * GRID.tileSize;
 export const DESIGN_HEIGHT = GRID.rows * GRID.tileSize;
+
+/** Reserved HUD bar below the play field, and the full canvas height. */
+export const HUD_HEIGHT = 160;
+export const TOTAL_HEIGHT = DESIGN_HEIGHT + HUD_HEIGHT;
 
 /** Portal spawns on the top row; Base sits on the bottom row. */
 export const PORTAL_ROW = 0;
