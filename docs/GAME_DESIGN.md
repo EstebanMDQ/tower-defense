@@ -45,11 +45,12 @@ Kill rewards are deliberately small: income comes mainly from surviving waves
 
 Base stats are at level 1 (freshly built).
 
-| Tower          | Cost $ | Damage | Range (tiles) | Fire rate (/s) | Targets      | Special                |
-|----------------|--------|--------|---------------|----------------|--------------|------------------------|
-| Machine Gun    | 50     | 5      | 2.5           | 4              | Ground + Air | Single target (20 DPS) |
-| Mortar         | 180    | 40     | 3.5           | 0.5            | Ground       | Splash radius 1.0 tile |
-| Missiles (SAM) | 160    | 35     | 4.0           | 1              | Air          | Single target, air-only |
+| Tower          | Cost $ | Damage | Range (tiles) | Fire rate (/s) | Targets      | Special                     |
+|----------------|--------|--------|---------------|----------------|--------------|-----------------------------|
+| Machine Gun    | 50     | 5      | 2.5           | 4              | Ground + Air | Single target (20 DPS)      |
+| Mortar         | 180    | 40     | 3.5           | 0.5            | Ground       | Splash radius 1.0 tile      |
+| Missiles (SAM) | 160    | 35     | 4.0           | 1              | Air          | Single target, air-only     |
+| Sniper         | 250    | 120    | 8.0           | 0.2            | Ground + Air | Piercing line, band 0.4 tile |
 
 ### Target rules
 
@@ -58,8 +59,14 @@ Base stats are at level 1 (freshly built).
 - **Mortar** hits **ground only** - the splash specialist for grouped ground waves.
 - **Missiles** hit **air only** - the strong dedicated anti-air; a wave of planes
   needs Missiles, since Machine Guns alone cannot out-damage them.
+- **Sniper** hits **both ground and air** with a piercing line (damages every
+  enemy along its firing line). Very expensive and very slow (one shot every 5s) -
+  a high-investment line nuke, not a sustained answer. *Tunable to watch:* because
+  planes fly a straight Portal->Base line, one shot can pierce the whole plane
+  column; range 8 is near board-wide, so cost and cooldown are the balancing levers
+  (flag for playtesting; range/falloff/hit-cap can be revisited).
 - Roles drive the buy order: early waves are about good Machine Gun coverage; the
-  expensive specialists (Mortar, Missiles) are deliberate commitments.
+  expensive specialists (Mortar, Missiles, Sniper) are deliberate commitments.
 
 ### Targeting priority
 

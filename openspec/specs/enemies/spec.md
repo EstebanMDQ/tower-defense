@@ -93,3 +93,122 @@ determine whether they may target it.
 - **THEN** the enemy reports `air` for planes and `ground` for Soldier, Buggy, and
   Tank
 
+### Requirement: Enemies face their direction of travel
+
+Each enemy SHALL maintain a facing angle that points along its direction of
+movement, and its drawn shape SHALL be oriented to that facing. The facing SHALL
+ease toward the movement direction at a per-type turn rate rather than snapping, so
+units visibly turn through direction changes. This is presentation only and SHALL
+NOT change movement, speed, or combat.
+
+#### Scenario: Facing follows movement
+
+- **WHEN** an enemy moves along a straight segment
+- **THEN** its facing angle points in the direction it is moving
+
+#### Scenario: Smooth turn at a limited turn rate
+
+- **WHEN** the movement direction changes (for example at a path corner) for an
+  enemy with a limited turn rate, such as the Tank
+- **THEN** its facing rotates toward the new direction over time at its turn rate,
+  not instantly
+
+#### Scenario: Initial facing
+
+- **WHEN** an enemy spawns
+- **THEN** its facing is already set toward its first target, so it does not swing
+  from a default orientation on the first frame
+
+#### Scenario: Oriented shapes
+
+- **WHEN** enemies are drawn
+- **THEN** each type's shape is rotated to its facing: a plane is a triangle with
+  its nose forward, a tank is a rectangle hull (with a turret line) oriented along
+  its heading, a buggy is a rectangle oriented along its heading, and a soldier is a
+  circle with a short nub indicating its facing
+
+#### Scenario: Stationary keeps facing
+
+- **WHEN** an enemy is at its target (the toward-target direction is near-zero, e.g.
+  reaching the base)
+- **THEN** its facing angle is unchanged from the previous frame (it does not snap to
+  a default)
+
+#### Scenario: Gameplay unchanged
+
+- **WHEN** facing and rotation are applied
+- **THEN** movement, speed, HP, rewards, and targeting are unaffected
+
+### Requirement: Per-wave procedural enemy variants
+
+Each enemy SHALL be drawn with a procedurally generated appearance variant (body
+color, accent color, and small details) derived deterministically from its type and
+its wave number. The variant SHALL preserve the type's shape - only colors and minor
+details change - and SHALL NOT affect movement, HP, rewards, or targeting.
+
+#### Scenario: Deterministic per type and wave
+
+- **WHEN** a variant is generated for the same enemy type and wave number more than
+  once
+- **THEN** the identical appearance is produced each time
+
+#### Scenario: Consistent within a wave
+
+- **WHEN** multiple enemies of the same type spawn during the same wave
+- **THEN** they all share the same appearance variant
+
+#### Scenario: Changes between adjacent waves
+
+- **WHEN** the same enemy type appears in two consecutive waves
+- **THEN** its appearance variant differs (the monotonic per-wave saturation/lightness
+  offset guarantees a difference before clamping; for arbitrary far-apart waves the
+  difference is very likely but not strictly guaranteed once values clamp)
+
+#### Scenario: Escalation trend
+
+- **WHEN** comparing variants of the same type across rising wave numbers (before
+  clamping)
+- **THEN** saturation is non-decreasing and lightness is non-increasing, so higher
+  waves read as darker / more intense
+
+#### Scenario: Shape preserved
+
+- **WHEN** an enemy is drawn with its variant
+- **THEN** the renderer selects the same shape branch for the type regardless of the
+  variant (the variant carries only colors and detail flags, no shape), so a tank
+  still reads as a tank
+
+#### Scenario: Gameplay unchanged
+
+- **WHEN** variants are applied
+- **THEN** movement, speed, HP, rewards, and targeting are unaffected
+
+### Requirement: Enemy death explosion
+
+When an enemy is killed (its health reaches zero), the game SHALL spawn a transient
+explosion effect at the enemy's position. The explosion SHALL be visually distinct
+per enemy type. Enemies that reach the base SHALL NOT explode, and the effect SHALL
+NOT change any gameplay (rewards, lives, or removal).
+
+#### Scenario: Killed enemy explodes
+
+- **WHEN** an enemy's health reaches zero
+- **THEN** an explosion effect is created at that enemy's position
+
+#### Scenario: Distinct per type
+
+- **WHEN** enemies of different types are killed
+- **THEN** their explosions differ in appearance (for example color, size, particle
+  count, or spread) according to each type's configuration
+
+#### Scenario: Leaked enemies do not explode
+
+- **WHEN** an enemy reaches the base instead of being killed
+- **THEN** no explosion effect is created for it
+
+#### Scenario: Transient and gameplay-neutral
+
+- **WHEN** an explosion effect has been active for its full lifetime
+- **THEN** it is removed, and the kill's reward and the enemy's removal are
+  unchanged by the presence of the effect
+
