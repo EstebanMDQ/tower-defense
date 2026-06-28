@@ -77,6 +77,9 @@ export class TowerManager {
   private blasts: Blast[] = [];
   private occupied = new Set<string>();
 
+  /** Optional hook fired whenever a tower shoots (for sound). */
+  onFire?: (type: TowerType) => void;
+
   constructor(
     private readonly map: GameMap,
     private readonly economy: Economy,
@@ -161,6 +164,7 @@ export class TowerManager {
   }
 
   private fire(tower: Tower, target: Enemy, enemies: readonly Enemy[]): void {
+    this.onFire?.(tower.type);
     switch (tower.attack) {
       case "pierce":
         this.firePierce(tower, target, enemies);

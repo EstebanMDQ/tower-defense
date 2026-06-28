@@ -30,6 +30,10 @@ export class EnemyManager {
   private particles: Particle[] = [];
   private variantCache = new Map<string, EnemyVariant>();
 
+  /** Optional hooks fired on a kill / on a base arrival (for sound). */
+  onKill?: (type: EnemyType) => void;
+  onLeak?: () => void;
+
   constructor(
     private readonly groundRoute: Vec2[],
     private readonly airRoute: Vec2[],
@@ -71,8 +75,10 @@ export class EnemyManager {
       if (!enemy.alive) {
         this.economy.earn(enemy.reward);
         this.spawnExplosion(enemy);
+        this.onKill?.(enemy.type);
       } else if (enemy.reachedBase) {
         this.economy.loseLives(enemy.livesCost);
+        this.onLeak?.();
       }
     }
     this.enemies = this.enemies.filter((e) => e.alive && !e.reachedBase);

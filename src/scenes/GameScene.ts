@@ -10,6 +10,14 @@ import { ENEMIES } from "../config/enemies";
 import { TOWERS, type TowerType } from "../config/towers";
 import type { Tower } from "../entities/Tower";
 import type { TileCoord, Vec2 } from "../types";
+import { audio, music, type SfxName } from "../audio";
+
+const FIRE_SFX: Record<TowerType, SfxName> = {
+  machineGun: "mgShot",
+  mortar: "mortarShot",
+  missiles: "missileShot",
+  sniper: "sniperShot",
+};
 
 /**
  * The world scene: owns the play field, entities, and the gameplay update loop.
@@ -59,7 +67,17 @@ export class GameScene extends Phaser.Scene {
     this.paused = false;
     this.speedFactor = 1;
 
+    // Sound triggers (engine is a no-op until resumed / when muted).
+    this.towerManager.onFire = (type) => audio.play(FIRE_SFX[type]);
+    this.enemyManager.onKill = () => audio.play("explosion");
+    this.enemyManager.onLeak = () => audio.play("leak");
+    this.waveManager.onPhaseChanged((phase) => {
+      if (phase === "active") audio.play("waveStart");
+    });
+
     this.economy.onGameOver(() => {
+      audio.play("gameOver");
+      music.stop();
       this.scene.stop("HUD");
       this.scene.start("GameOver", { wave: this.waveManager.getWave() });
     });
@@ -69,6 +87,8 @@ export class GameScene extends Phaser.Scene {
     this.drawStatic();
     this.dynamicGfx = this.add.graphics();
     this.setupInput();
+
+    music.start(); // looping placeholder song (silent until composed)
   }
 
   update(_time: number, delta: number): void {
@@ -98,6 +118,7 @@ export class GameScene extends Phaser.Scene {
     kb?.on("keydown-THREE", () => (this.selectedTowerType = "missiles"));
     kb?.on("keydown-FOUR", () => (this.selectedTowerType = "sniper"));
     kb?.on("keydown-SPACE", () => this.waveManager.startWave());
+    kb?.on("keydown-M", () => audio.setMuted(!audio.isMuted()));
   }
 
   /** Tap an existing tower to select it (HUD shows upgrade), or a buildable
@@ -112,7 +133,9 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.selectedTower = null;
-    this.towerManager.place(this.selectedTowerType, tile);
+    if (this.towerManager.place(this.selectedTowerType, tile)) {
+      audio.play("place");
+    }
   }
 
   // --- Rendering -------------------------------------------------------------

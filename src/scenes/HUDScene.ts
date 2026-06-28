@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { DESIGN_WIDTH, DESIGN_HEIGHT, HUD_HEIGHT } from "../config/grid";
 import { TOWERS, TOWER_TYPES, type TowerType } from "../config/towers";
 import type { GameScene } from "./GameScene";
+import { audio } from "../audio";
 
 /** A simple rectangular button with an enabled/highlight state. */
 class Button {
@@ -77,6 +78,7 @@ export class HUDScene extends Phaser.Scene {
   private sellButton!: Button;
   private pauseButton!: Button;
   private speedButton!: Button;
+  private muteButton!: Button;
   private fullscreenButton!: Button;
 
   constructor() {
@@ -96,24 +98,27 @@ export class HUDScene extends Phaser.Scene {
       fontSize: "15px",
       color: "#ffffff",
     };
-    this.moneyText = this.add.text(8, top + 8, "", {
+    this.moneyText = this.add.text(6, top + 8, "", {
       ...labelStyle,
       color: "#ffd166",
     });
-    this.livesText = this.add.text(104, top + 8, "", {
+    this.livesText = this.add.text(86, top + 8, "", {
       ...labelStyle,
       color: "#ef476f",
     });
-    this.waveText = this.add.text(186, top + 8, "", labelStyle);
+    this.waveText = this.add.text(158, top + 8, "", labelStyle);
 
-    // Pause / speed / fullscreen controls.
-    this.pauseButton = new Button(this, 252, top + 4, 46, 24, "Pause", () => {
+    // Pause / speed / mute / fullscreen controls.
+    this.pauseButton = new Button(this, 222, top + 4, 42, 24, "Pause", () => {
       this.gameScene.paused = !this.gameScene.paused;
     });
-    this.speedButton = new Button(this, 302, top + 4, 36, 24, "1x", () => {
+    this.speedButton = new Button(this, 268, top + 4, 28, 24, "1x", () => {
       this.gameScene.speedFactor = this.gameScene.speedFactor === 1 ? 2 : 1;
     });
-    this.fullscreenButton = new Button(this, 342, top + 4, 66, 24, "Full", () => {
+    this.muteButton = new Button(this, 300, top + 4, 40, 24, "Snd", () => {
+      audio.setMuted(!audio.isMuted());
+    });
+    this.fullscreenButton = new Button(this, 344, top + 4, 64, 24, "Full", () => {
       this.scale.toggleFullscreen();
     });
     // The Fullscreen API is unavailable on iOS Safari; hide the button there
@@ -156,13 +161,16 @@ export class HUDScene extends Phaser.Scene {
     );
     this.upgradeButton = new Button(this, 8, bottomY, 202, 40, "Upgrade", () => {
       if (this.gameScene.selectedTower) {
-        this.gameScene.towerManager.upgrade(this.gameScene.selectedTower);
+        if (this.gameScene.towerManager.upgrade(this.gameScene.selectedTower)) {
+          audio.play("upgrade");
+        }
       }
     });
     this.sellButton = new Button(this, 222, bottomY, 202, 40, "Sell", () => {
       if (this.gameScene.selectedTower) {
         this.gameScene.towerManager.sell(this.gameScene.selectedTower);
         this.gameScene.selectedTower = null;
+        audio.play("sell");
       }
     });
 
@@ -220,6 +228,7 @@ export class HUDScene extends Phaser.Scene {
 
     this.pauseButton.setText(game.paused ? "Resume" : "Pause");
     this.speedButton.setText(`${game.speedFactor}x`);
+    this.muteButton.setText(audio.isMuted() ? "Mut" : "Snd");
     this.fullscreenButton.setText(this.scale.isFullscreen ? "Exit" : "Full");
   }
 }
