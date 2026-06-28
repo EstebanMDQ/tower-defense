@@ -5,6 +5,7 @@ import { randomSeed } from "../systems/Rng";
 import { Economy } from "../systems/Economy";
 import { EnemyManager } from "../systems/EnemyManager";
 import { TowerManager } from "../systems/TowerManager";
+import { WaveManager } from "../systems/WaveManager";
 import { ENEMIES } from "../config/enemies";
 import { TOWERS, type TowerType } from "../config/towers";
 import type { TileCoord, Vec2 } from "../types";
@@ -20,6 +21,7 @@ export class GameScene extends Phaser.Scene {
   economy!: Economy;
   enemyManager!: EnemyManager;
   towerManager!: TowerManager;
+  waveManager!: WaveManager;
 
   selectedTowerType: TowerType = "machineGun";
 
@@ -44,6 +46,7 @@ export class GameScene extends Phaser.Scene {
       this.economy,
       this.enemyManager,
     );
+    this.waveManager = new WaveManager(this.enemyManager, this.economy);
 
     this.scene.launch("HUD");
 
@@ -57,6 +60,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private step(dt: number): void {
+    this.waveManager.update(dt);
     this.enemyManager.update(dt);
     this.towerManager.update(dt);
     this.drawDynamic();
@@ -75,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     kb?.on("keydown-ONE", () => (this.selectedTowerType = "machineGun"));
     kb?.on("keydown-TWO", () => (this.selectedTowerType = "mortar"));
     kb?.on("keydown-THREE", () => (this.selectedTowerType = "missiles"));
+    kb?.on("keydown-SPACE", () => this.waveManager.startWave());
   }
 
   /** Tap an existing tower to upgrade it, or a buildable tile to place. */
