@@ -5,6 +5,10 @@ export const WAVES = {
   minSpawnInterval: 0.4,
   /** Seconds shaved off the spawn interval per wave (tightens cadence). */
   spawnIntervalDecayPerWave: 0.03,
+  /** Build window before the first wave auto-starts. */
+  initialPrep: 12,
+  /** Build window between waves before the next auto-starts. */
+  betweenWaves: 6,
 } as const;
 
 /** Number of enemies in a wave. */
@@ -14,7 +18,7 @@ export function enemyCount(wave: number): number {
 
 /** Per-wave HP multiplier applied to enemies at spawn. */
 export function hpScale(wave: number): number {
-  return 1 + 0.15 * (wave - 1);
+  return 1 + 0.18 * (wave - 1);
 }
 
 /** Spawn interval (seconds), tightening with the wave down to a floor. */
@@ -25,9 +29,9 @@ export function spawnInterval(wave: number): number {
   );
 }
 
-/** Money granted for clearing a wave. */
+/** Money granted for clearing a wave (the main income source). */
 export function clearBonus(wave: number): number {
-  return 20 + 5 * wave;
+  return 20 + 7 * wave;
 }
 
 interface CompositionEntry {

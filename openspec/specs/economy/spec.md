@@ -10,7 +10,7 @@ A new run SHALL begin with the configured starting money and starting lives.
 #### Scenario: Initial state
 
 - **WHEN** a new run starts
-- **THEN** the player has 200 money and 20 lives
+- **THEN** the player has 180 money and 20 lives
 
 ### Requirement: Spending money with affordability checks
 

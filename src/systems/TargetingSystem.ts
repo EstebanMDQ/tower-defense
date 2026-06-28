@@ -3,14 +3,14 @@ import type { TargetClass } from "../types";
 
 /**
  * Select the enemy closest to the base (least remaining route distance) among
- * those of the given target class within range of (x, y). Returns null when none
+ * those of a targetable class within range of (x, y). Returns null when none
  * are eligible. Ties keep the earlier-encountered enemy (deterministic).
  */
 export function acquireTarget(
   x: number,
   y: number,
   rangePx: number,
-  targets: TargetClass,
+  targets: readonly TargetClass[],
   enemies: readonly Enemy[],
 ): Enemy | null {
   const rangeSq = rangePx * rangePx;
@@ -19,7 +19,7 @@ export function acquireTarget(
 
   for (const e of enemies) {
     if (!e.alive || e.reachedBase) continue;
-    if (e.targetClass !== targets) continue;
+    if (!targets.includes(e.targetClass)) continue;
     const dx = e.x - x;
     const dy = e.y - y;
     if (dx * dx + dy * dy > rangeSq) continue;

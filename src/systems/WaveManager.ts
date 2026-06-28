@@ -1,5 +1,6 @@
 import {
   COMPOSITION,
+  WAVES,
   clearBonus,
   enemyCount,
   hpScale,
@@ -57,6 +58,8 @@ export class WaveManager {
   private spawnTimer = 0;
   private interval = 0;
   private hp = 1;
+  /** Seconds left in the build phase before the next wave auto-starts. */
+  private prepRemaining: number = WAVES.initialPrep;
 
   private waveListeners: Listener<number>[] = [];
   private phaseListeners: Listener<WavePhase>[] = [];
@@ -74,6 +77,11 @@ export class WaveManager {
     return this.phase;
   }
 
+  /** Seconds left before the next wave auto-starts (0 during an active wave). */
+  getPrepRemaining(): number {
+    return this.phase === "build" ? Math.max(0, this.prepRemaining) : 0;
+  }
+
   /** Begin the next wave. Ignored if a wave is already active. */
   startWave(): void {
     if (this.phase === "active") return;
@@ -87,7 +95,12 @@ export class WaveManager {
   }
 
   update(dt: number): void {
-    if (this.phase !== "active") return;
+    // Build phase: count down, then auto-start the next wave.
+    if (this.phase === "build") {
+      this.prepRemaining -= dt;
+      if (this.prepRemaining <= 0) this.startWave();
+      return;
+    }
 
     if (this.queue.length > 0) {
       this.spawnTimer -= dt;
@@ -100,6 +113,7 @@ export class WaveManager {
 
     if (this.queue.length === 0 && this.enemyManager.isEmpty()) {
       this.economy.earn(clearBonus(this.wave));
+      this.prepRemaining = WAVES.betweenWaves;
       this.setPhase("build");
     }
   }

@@ -26,11 +26,16 @@ describe("Enemy config", () => {
     expect(ENEMIES.soldier).toMatchObject({
       hp: 30,
       speed: 1.2,
-      reward: 5,
+      reward: 1,
       livesCost: 1,
       targetClass: "ground",
     });
-    expect(ENEMIES.tank).toMatchObject({ hp: 200, speed: 0.6, livesCost: 3 });
+    expect(ENEMIES.tank).toMatchObject({
+      hp: 200,
+      speed: 0.6,
+      reward: 4,
+      livesCost: 3,
+    });
     expect(ENEMIES.plane.targetClass).toBe("air");
   });
 });

@@ -13,9 +13,11 @@ export class Tower {
   readonly tile: TileCoord;
   readonly x: number;
   readonly y: number;
-  readonly targets: TargetClass;
+  readonly targets: readonly TargetClass[];
   /** 1..MAX_LEVEL. */
   level = 1;
+  /** Total money spent on this tower (build + upgrades), for the sell refund. */
+  invested: number;
 
   private cooldown = 0;
 
@@ -23,6 +25,7 @@ export class Tower {
     this.type = type;
     this.tile = tile;
     this.targets = TOWERS[type].targets;
+    this.invested = TOWERS[type].cost;
     const p = tileToPixel(tile.col, tile.row);
     this.x = p.x;
     this.y = p.y;
@@ -69,6 +72,16 @@ export class Tower {
 
   applyUpgrade(): void {
     if (this.canUpgrade()) this.level++;
+  }
+
+  /** Record money spent upgrading, so the sell refund reflects total investment. */
+  recordInvestment(amount: number): void {
+    this.invested += amount;
+  }
+
+  /** Money returned when sold: half of the total invested. */
+  sellValue(): number {
+    return Math.floor(this.invested / 2);
   }
 
   tickCooldown(dt: number): void {

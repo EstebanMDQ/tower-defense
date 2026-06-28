@@ -18,9 +18,9 @@ the Mortar's splash radius) sourced from a single configuration.
 #### Scenario: Config matches the design values
 
 - **WHEN** the tower configuration is read
-- **THEN** Machine Gun = 50 cost, 5 damage, 2.5 range, 4/s, ground; Mortar = 120
-  cost, 40 damage, 3.5 range, 0.5/s, ground, 1.0 splash radius; Missiles = 90 cost,
-  35 damage, 4.0 range, 1/s, air
+- **THEN** Machine Gun = 50 cost, 5 damage, 2.5 range, 4/s, ground + air; Mortar =
+  180 cost, 40 damage, 3.5 range, 0.5/s, ground, 1.0 splash radius; Missiles = 160
+  cost, 35 damage, 4.0 range, 1/s, air
 
 ### Requirement: Tower placement with payment
 
@@ -109,13 +109,18 @@ splash radius of the impact point, not only the primary target.
 
 ### Requirement: Air/ground targeting restrictions
 
-The Machine Gun and Mortar SHALL target ground enemies only, and the Missiles tower
-SHALL target air enemies only.
+The Machine Gun SHALL target both ground and air enemies. The Mortar SHALL target
+ground enemies only. The Missiles tower SHALL target air enemies only.
 
-#### Scenario: Ground tower ignores planes
+#### Scenario: Machine Gun targets both classes
 
-- **WHEN** only planes are within a Machine Gun's or Mortar's range
-- **THEN** that tower does not target or damage them
+- **WHEN** ground enemies or planes are within a Machine Gun's range
+- **THEN** the Machine Gun can target and damage either class
+
+#### Scenario: Mortar ignores planes
+
+- **WHEN** only planes are within a Mortar's range
+- **THEN** the Mortar does not target or damage them
 
 #### Scenario: Missiles ignore ground
 
@@ -151,4 +156,15 @@ can afford it and the tower is below the maximum tier.
 
 - **WHEN** the player attempts an upgrade they cannot afford
 - **THEN** the upgrade is rejected and no money is deducted
+
+### Requirement: Selling a tower
+
+A tower SHALL be sellable for a refund of half its total investment (build cost
+plus all upgrade costs paid), after which it is removed and its tile is freed.
+
+#### Scenario: Sell refunds half of total investment
+
+- **WHEN** the player sells a tower that cost a total of N (build plus upgrades)
+- **THEN** the economy is credited floor(N / 2), the tower is removed, and its tile
+  becomes buildable again
 

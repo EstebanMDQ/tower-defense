@@ -33,29 +33,33 @@ Base stats are at wave 1. HP scales with the wave (see [Waves](#6-waves)).
 
 | Enemy   | HP  | Speed (tiles/s) | Reward $ | Lives cost | Type   | Notes                          |
 |---------|-----|-----------------|----------|------------|--------|--------------------------------|
-| Soldier | 30  | 1.2             | 5        | 1          | Ground | Baseline, cheap fodder         |
-| Buggy   | 50  | 2.0             | 8        | 1          | Ground | Fast, low HP - rushes          |
-| Tank    | 200 | 0.6             | 20       | 3          | Ground | Slow, tanky, high reward/threat |
-| Plane   | 80  | 1.8             | 12       | 1          | Air    | Off-path, anti-air only        |
+| Soldier | 30  | 1.2             | 1        | 1          | Ground | Baseline, cheap fodder         |
+| Buggy   | 50  | 2.0             | 2        | 1          | Ground | Fast, low HP - rushes          |
+| Tank    | 200 | 0.6             | 4        | 3          | Ground | Slow, tanky, high threat       |
+| Plane   | 80  | 1.8             | 2        | 1          | Air    | Off-path; hit by MG or Missiles |
+
+Kill rewards are deliberately small: income comes mainly from surviving waves
+(the clear bonus), so leaking enemies to "farm" is not viable.
 
 ## 3. Towers
 
 Base stats are at level 1 (freshly built).
 
-| Tower          | Cost $ | Damage | Range (tiles) | Fire rate (/s) | Targets | Special                |
-|----------------|--------|--------|---------------|----------------|---------|------------------------|
-| Machine Gun    | 50     | 5      | 2.5           | 4              | Ground  | Single target (20 DPS) |
-| Mortar         | 120    | 40     | 3.5           | 0.5            | Ground  | Splash radius 1.0 tile |
-| Missiles (SAM) | 90     | 35     | 4.0           | 1              | Air     | Single target, air-only |
+| Tower          | Cost $ | Damage | Range (tiles) | Fire rate (/s) | Targets      | Special                |
+|----------------|--------|--------|---------------|----------------|--------------|------------------------|
+| Machine Gun    | 50     | 5      | 2.5           | 4              | Ground + Air | Single target (20 DPS) |
+| Mortar         | 180    | 40     | 3.5           | 0.5            | Ground       | Splash radius 1.0 tile |
+| Missiles (SAM) | 160    | 35     | 4.0           | 1              | Air          | Single target, air-only |
 
-### Target rules (deliberately clean roles)
+### Target rules
 
-- **Machine Gun** and **Mortar** hit **ground only**; they cannot target planes.
-- **Missiles** hit **air only**; they cannot target ground.
-- This forces the player to buy Missiles once planes appear (wave 4+), and to mix
-  single-target (Machine Gun) with splash (Mortar) for ground threats.
-- **Tunable to revisit:** whether the Machine Gun should also weakly hit air.
-  Default is no, for clearer roles. Flagged for playtesting.
+- **Machine Gun** is the versatile generalist: it hits **both ground and air**,
+  but its low damage means it only chips at tougher enemies and planes.
+- **Mortar** hits **ground only** - the splash specialist for grouped ground waves.
+- **Missiles** hit **air only** - the strong dedicated anti-air; a wave of planes
+  needs Missiles, since Machine Guns alone cannot out-damage them.
+- Roles drive the buy order: early waves are about good Machine Gun coverage; the
+  expensive specialists (Mortar, Missiles) are deliberate commitments.
 
 ### Targeting priority
 
@@ -74,25 +78,30 @@ upgrade applies a multiplier to the tower's base stats.
 | 2     | x1.4   | x1.1  | x1.1      | 75% of build cost            |
 | 3     | x2.0   | x1.2  | x1.2      | 125% of build cost           |
 
-**Worked example - Mortar** (build cost 120):
+**Worked example - Mortar** (build cost 180):
 
-- L2 upgrade costs 90; L3 upgrade costs 150.
+- L2 upgrade costs 135; L3 upgrade costs 225.
 - Fully upgraded: 80 damage, 4.2 range, 0.6 shots/s.
-- Total invested to reach L3: 120 + 90 + 150 = **360**.
+- Total invested to reach L3: 180 + 135 + 225 = **540**.
 
 ## 5. Economy
 
-- **Starting money:** 200.
+- **Starting money:** 180 - opens roughly 3 Machine Guns, so initial placement
+  matters.
 - **Starting lives:** 20. An enemy reaching the Base subtracts its "lives cost".
   At 0 lives -> **game over**.
-- **Kill reward:** granted on enemy death, per the [Enemies](#2-enemies) table.
-- **Wave clear bonus:** `20 + 5 * waveNumber`, paid when a wave is fully cleared.
-  Rewards survival and helps fund the next wave.
-- **No selling** in v1 (keep it simple); a refund mechanic can be added later.
+- **Kill reward:** a small amount per kill (see [Enemies](#2-enemies)); not a
+  viable income source on its own.
+- **Wave clear bonus:** `20 + 7 * waveNumber`, paid when a wave is cleared. This
+  is the **main income**, so income scales with how long you survive.
+- **Selling:** a tower can be sold for **50% of its total investment** (build cost
+  plus all upgrades paid), freeing its tile for repositioning.
 
-**Sanity check (wave 1):** 8 soldiers -> 40$ in kills + 25$ clear bonus = 65$ on
-top of the 200 start. The player can open with roughly 3-4 Machine Guns, which is
-enough to clear wave 1 and bank toward Mortars/Missiles.
+**Sanity check:** start 180 -> 3 Machine Guns (150). Per-wave income is roughly the
+clear bonus plus a few coins of kills (~30-50 early), so the first Missiles (160)
+land around when planes arrive at wave 4 - skimping on a 4th Machine Gun to afford
+anti-air early is a real decision. These numbers are a first balance pass, tuned in
+config and meant to be iterated after playtesting.
 
 ## 6. Waves
 
@@ -100,17 +109,19 @@ enough to clear wave 1 and bank toward Mortars/Missiles.
 scaling so balancing is predictable.
 
 - **Enemy count:** `6 + 2 * waveNumber` enemies per wave.
-- **HP scaling:** each enemy's base HP is multiplied by `1 + 0.15 * (waveNumber - 1)`.
+- **HP scaling:** each enemy's base HP is multiplied by `1 + 0.18 * (waveNumber - 1)`.
 - **Composition unlocks** (the wave's mix is drawn from the unlocked pool, weighted):
   - Waves 1-2: Soldiers only.
   - Wave 3+: Buggies enter the pool.
-  - Wave 4+: **Planes** enter - this is when Missiles become necessary.
+  - Wave 4+: **Planes** enter - bring Machine Guns or Missiles.
   - Wave 5+: Tanks enter.
   - Later waves: weighting shifts toward Tanks and Planes.
 - **Spawn cadence:** enemies spawn from the Portal at a fixed interval (~0.8s),
   tightening slightly on higher waves.
-- **Wave flow:** a short **build/prep phase** sits between waves for placing and
-  upgrading towers. (Stretch: tap "Start Wave" to begin early for a small bonus.)
+- **Wave flow (automatic):** waves auto-advance. A build/prep countdown runs before
+  each wave (~12s before the first, ~6s between) and the next wave starts when it
+  reaches zero. The player can build at any time and can tap **Start Now** (or
+  press Space) to skip the remaining countdown. Pause halts the countdown.
 
 ## 7. Game states / loop
 

@@ -21,7 +21,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
   soldier: {
     hp: 30,
     speed: 1.2,
-    reward: 5,
+    reward: 1,
     livesCost: 1,
     targetClass: "ground",
     color: 0xffd166,
@@ -30,7 +30,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
   buggy: {
     hp: 50,
     speed: 2.0,
-    reward: 8,
+    reward: 2,
     livesCost: 1,
     targetClass: "ground",
     color: 0xef476f,
@@ -39,7 +39,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
   tank: {
     hp: 200,
     speed: 0.6,
-    reward: 20,
+    reward: 4,
     livesCost: 3,
     targetClass: "ground",
     color: 0x06d6a0,
@@ -48,7 +48,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
   plane: {
     hp: 80,
     speed: 1.8,
-    reward: 12,
+    reward: 2,
     livesCost: 1,
     targetClass: "air",
     color: 0x118ab2,

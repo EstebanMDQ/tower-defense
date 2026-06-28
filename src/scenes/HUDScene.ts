@@ -74,6 +74,7 @@ export class HUDScene extends Phaser.Scene {
   private paletteButtons: { type: TowerType; button: Button }[] = [];
   private startButton!: Button;
   private upgradeButton!: Button;
+  private sellButton!: Button;
   private pauseButton!: Button;
   private speedButton!: Button;
 
@@ -133,7 +134,7 @@ export class HUDScene extends Phaser.Scene {
       this.paletteButtons.push({ type, button });
     });
 
-    // Contextual bottom row: start-wave or upgrade.
+    // Contextual bottom row: a wave countdown, or the upgrade/sell pair.
     const bottomY = top + 88;
     this.startButton = new Button(
       this,
@@ -141,22 +142,20 @@ export class HUDScene extends Phaser.Scene {
       bottomY,
       DESIGN_WIDTH - 16,
       40,
-      "START WAVE",
+      "",
       () => this.gameScene.waveManager.startWave(),
     );
-    this.upgradeButton = new Button(
-      this,
-      8,
-      bottomY,
-      DESIGN_WIDTH - 16,
-      40,
-      "Upgrade",
-      () => {
-        if (this.gameScene.selectedTower) {
-          this.gameScene.towerManager.upgrade(this.gameScene.selectedTower);
-        }
-      },
-    );
+    this.upgradeButton = new Button(this, 8, bottomY, 202, 40, "Upgrade", () => {
+      if (this.gameScene.selectedTower) {
+        this.gameScene.towerManager.upgrade(this.gameScene.selectedTower);
+      }
+    });
+    this.sellButton = new Button(this, 222, bottomY, 202, 40, "Sell", () => {
+      if (this.gameScene.selectedTower) {
+        this.gameScene.towerManager.sell(this.gameScene.selectedTower);
+        this.gameScene.selectedTower = null;
+      }
+    });
 
     this.subscribe();
   }
@@ -187,22 +186,27 @@ export class HUDScene extends Phaser.Scene {
     if (tower) {
       this.startButton.setVisible(false);
       this.upgradeButton.setVisible(true);
+      this.sellButton.setVisible(true);
       if (tower.canUpgrade()) {
         const cost = tower.upgradeCost();
-        this.upgradeButton.setText(
-          `${tower.spec.name} Lv${tower.level}  ->  Upgrade $${cost}`,
-        );
+        this.upgradeButton.setText(`Lv${tower.level} -> Upgrade $${cost}`);
         this.upgradeButton.setEnabled(game.economy.canAfford(cost));
       } else {
-        this.upgradeButton.setText(`${tower.spec.name} Lv${tower.level} (MAX)`);
+        this.upgradeButton.setText(`Lv${tower.level} (MAX)`);
         this.upgradeButton.setEnabled(false);
       }
+      this.sellButton.setText(`Sell +$${tower.sellValue()}`);
+      this.sellButton.setEnabled(true);
     } else if (game.waveManager.getPhase() === "build") {
       this.upgradeButton.setVisible(false);
+      this.sellButton.setVisible(false);
       this.startButton.setVisible(true);
+      const secs = Math.ceil(game.waveManager.getPrepRemaining());
+      this.startButton.setText(`Next wave in ${secs}s  -  tap to start`);
     } else {
       this.startButton.setVisible(false);
       this.upgradeButton.setVisible(false);
+      this.sellButton.setVisible(false);
     }
 
     this.pauseButton.setText(game.paused ? "Resume" : "Pause");

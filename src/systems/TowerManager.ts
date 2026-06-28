@@ -55,7 +55,19 @@ export class TowerManager {
     if (!this.economy.canAfford(cost)) return false;
     if (!this.economy.spend(cost)) return false;
     tower.applyUpgrade();
+    tower.recordInvestment(cost);
     return true;
+  }
+
+  /** Sell a tower: refund half its total investment and free its tile. */
+  sell(tower: Tower): number {
+    const index = this.towers.indexOf(tower);
+    if (index === -1) return 0;
+    const refund = tower.sellValue();
+    this.economy.earn(refund);
+    this.towers.splice(index, 1);
+    this.occupied.delete(tileKey(tower.tile));
+    return refund;
   }
 
   /** Tower occupying a tile, if any. */

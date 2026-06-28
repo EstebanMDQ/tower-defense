@@ -2,9 +2,9 @@ import { describe, it, expect, vi } from "vitest";
 import { Economy } from "../src/systems/Economy";
 
 describe("Economy", () => {
-  it("starts with 200 money and 20 lives", () => {
+  it("starts with 180 money and 20 lives", () => {
     const e = new Economy();
-    expect(e.getMoney()).toBe(200);
+    expect(e.getMoney()).toBe(180);
     expect(e.getLives()).toBe(20);
     expect(e.isGameOver()).toBe(false);
   });

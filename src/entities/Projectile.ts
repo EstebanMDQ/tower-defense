@@ -6,7 +6,7 @@ export interface ProjectileOptions {
   y: number;
   speedPx: number;
   damage: number;
-  targets: TargetClass;
+  targets: readonly TargetClass[];
   /** Homing single-target: follows the enemy; discarded if it is removed. */
   target?: Enemy;
   /** Fixed impact point (Mortar): explodes at this point regardless of target. */
@@ -76,7 +76,7 @@ export class Projectile {
       const r2 = splash * splash;
       for (const e of enemies) {
         if (!e.alive || e.reachedBase) continue;
-        if (e.targetClass !== this.opts.targets) continue;
+        if (!this.opts.targets.includes(e.targetClass)) continue;
         const dx = e.x - this.x;
         const dy = e.y - this.y;
         if (dx * dx + dy * dy <= r2) e.takeDamage(this.opts.damage);

@@ -59,15 +59,27 @@ invokes the tower upgrade operation, disabled when at max tier or unaffordable.
 - **WHEN** the selected tower is at max tier or the player cannot afford the upgrade
 - **THEN** the upgrade action is disabled
 
-### Requirement: Start-wave control
+#### Scenario: Sell a tower
 
-During the build phase the HUD SHALL present a control to start the next wave, and
-SHALL hide or disable it while a wave is active.
+- **WHEN** the player selects a placed tower and chooses sell
+- **THEN** the sell operation is invoked, the refund is credited, and the tower is
+  removed from the field
 
-#### Scenario: Start the next wave
+### Requirement: Next-wave countdown control
 
-- **WHEN** the player taps the start-wave control during a build phase
-- **THEN** the next wave begins and the control is hidden or disabled until the wave
+During the build phase the HUD SHALL display the countdown until the next wave
+auto-starts and provide a control to skip the remaining countdown and start
+immediately; both are hidden while a wave is active.
+
+#### Scenario: Countdown shown during build phase
+
+- **WHEN** the game is in the build phase
+- **THEN** the HUD shows the seconds remaining until the next wave auto-starts
+
+#### Scenario: Skip the countdown
+
+- **WHEN** the player taps the start-now control during the build phase
+- **THEN** the next wave begins immediately and the control is hidden until the wave
   ends
 
 ### Requirement: Pause and speed controls (optional)

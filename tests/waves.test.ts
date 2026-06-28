@@ -29,14 +29,14 @@ describe("wave formulas", () => {
     expect(enemyCount(5)).toBe(16);
   });
 
-  it("HP scales 1 + 0.15*(wave-1)", () => {
+  it("HP scales 1 + 0.18*(wave-1)", () => {
     expect(hpScale(1)).toBeCloseTo(1.0);
-    expect(hpScale(5)).toBeCloseTo(1.6);
+    expect(hpScale(5)).toBeCloseTo(1.72);
   });
 
-  it("clear bonus is 20 + 5*wave", () => {
-    expect(clearBonus(1)).toBe(25);
-    expect(clearBonus(10)).toBe(70);
+  it("clear bonus is 20 + 7*wave", () => {
+    expect(clearBonus(1)).toBe(27);
+    expect(clearBonus(10)).toBe(90);
   });
 
   it("spawn interval tightens with a floor", () => {
@@ -108,23 +108,47 @@ describe("WaveManager", () => {
 
   it("does not spawn during the build phase", () => {
     const { enemies, waves } = setup();
-    waves.update(1);
+    waves.update(1); // still within the initial prep window
     expect(enemies.isEmpty()).toBe(true);
+    expect(waves.getPhase()).toBe("build");
+  });
+
+  it("auto-starts the next wave after the prep countdown", () => {
+    const { waves } = setup();
+    expect(waves.getWave()).toBe(0);
+    for (let t = 0; t < WAVES.initialPrep + 1; t += 1 / 60) {
+      waves.update(1 / 60);
+    }
+    expect(waves.getWave()).toBe(1);
+    expect(waves.getPhase()).toBe("active");
+  });
+
+  it("reports a prep countdown during the build phase", () => {
+    const { waves } = setup();
+    const start = waves.getPrepRemaining();
+    expect(start).toBeGreaterThan(0);
+    waves.update(2);
+    expect(waves.getPrepRemaining()).toBeLessThan(start);
   });
 
   it("spawns the wave, completes it, and grants the clear bonus", () => {
     const { economy, enemies, waves } = setup();
     waves.startWave(); // wave 1: 8 soldiers
-    // Run enough time to spawn all and let them reach the base (no towers).
-    for (let t = 0; t < 60; t += 1 / 60) {
+    // Run until wave 1 completes (phase returns to build), capped to be safe.
+    let guard = 0;
+    while (
+      !(waves.getWave() === 1 && waves.getPhase() === "build") &&
+      guard < 6000
+    ) {
       waves.update(1 / 60);
       enemies.update(1 / 60);
+      guard++;
     }
     expect(waves.getPhase()).toBe("build");
     expect(enemies.isEmpty()).toBe(true);
     // All 8 soldiers reached the base (lives cost 1 each) -> 20 - 8 = 12.
     expect(economy.getLives()).toBe(12);
-    // Clear bonus for wave 1 = 25.
+    // Clear bonus for wave 1 = 27 (no kills, so no kill rewards).
     expect(economy.getMoney()).toBe(clearBonus(1));
   });
 });

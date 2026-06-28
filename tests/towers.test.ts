@@ -32,15 +32,15 @@ describe("Tower config and stats", () => {
       damage: 5,
       range: 2.5,
       fireRate: 4,
-      targets: "ground",
+      targets: ["ground", "air"],
     });
     expect(TOWERS.mortar).toMatchObject({
-      cost: 120,
+      cost: 180,
       damage: 40,
-      targets: "ground",
+      targets: ["ground"],
       splashRadius: 1.0,
     });
-    expect(TOWERS.missiles).toMatchObject({ cost: 90, targets: "air" });
+    expect(TOWERS.missiles).toMatchObject({ cost: 160, targets: ["air"] });
   });
 
   it("applies upgrade multipliers (tier-3 Mortar example)", () => {
@@ -55,10 +55,10 @@ describe("Tower config and stats", () => {
   });
 
   it("computes upgrade costs as cost ratios of build cost", () => {
-    const t = new Tower("mortar", { col: 1, row: 1 }); // build 120
-    expect(t.upgradeCost()).toBe(90); // 120 * 0.75
+    const t = new Tower("mortar", { col: 1, row: 1 }); // build 180
+    expect(t.upgradeCost()).toBe(135); // 180 * 0.75
     t.applyUpgrade();
-    expect(t.upgradeCost()).toBe(150); // 120 * 1.25
+    expect(t.upgradeCost()).toBe(225); // 180 * 1.25
   });
 });
 
@@ -68,22 +68,27 @@ describe("Targeting", () => {
   const plane = makeEnemy("plane", 11, 11, 100);
 
   it("picks the eligible enemy closest to the base", () => {
-    const target = acquireTarget(0, 0, 1000, "ground", [enemyA, enemyB]);
+    const target = acquireTarget(0, 0, 1000, ["ground"], [enemyA, enemyB]);
     expect(target).toBe(enemyB);
   });
 
   it("respects range", () => {
-    const target = acquireTarget(0, 0, 5, "ground", [enemyA]);
+    const target = acquireTarget(0, 0, 5, ["ground"], [enemyA]);
     expect(target).toBeNull();
   });
 
   it("filters by target class", () => {
-    // Ground tower ignores planes.
-    expect(acquireTarget(0, 0, 1000, "ground", [plane])).toBeNull();
-    // Air tower ignores ground.
-    expect(acquireTarget(0, 0, 1000, "air", [enemyA])).toBeNull();
-    // Air tower hits planes.
-    expect(acquireTarget(0, 0, 1000, "air", [plane])).toBe(plane);
+    // Mortar (ground only) ignores planes.
+    expect(acquireTarget(0, 0, 1000, ["ground"], [plane])).toBeNull();
+    // Missiles (air only) ignore ground.
+    expect(acquireTarget(0, 0, 1000, ["air"], [enemyA])).toBeNull();
+    // Missiles hit planes.
+    expect(acquireTarget(0, 0, 1000, ["air"], [plane])).toBe(plane);
+  });
+
+  it("machine gun targets both ground and air", () => {
+    expect(acquireTarget(0, 0, 1000, ["ground", "air"], [enemyA])).toBe(enemyA);
+    expect(acquireTarget(0, 0, 1000, ["ground", "air"], [plane])).toBe(plane);
   });
 });
 
@@ -130,11 +135,24 @@ describe("TowerManager placement and upgrade", () => {
     const { map, towers } = setup(300);
     const tile = firstBuildable(map);
     const tower = towers.place("machineGun", tile)!; // -50 -> 250
-    expect(towers.upgrade(tower)).toBe(true); // -37 (50*0.75 rounded)
+    expect(towers.upgrade(tower)).toBe(true); // -38 (50*0.75 rounded)
     expect(tower.level).toBe(2);
     expect(towers.upgrade(tower)).toBe(true); // -63 (50*1.25)
     expect(tower.level).toBe(3);
     expect(towers.upgrade(tower)).toBe(false); // max tier
+  });
+
+  it("sells a tower for half its total investment and frees the tile", () => {
+    const { map, economy, towers } = setup(300);
+    const tile = firstBuildable(map);
+    const tower = towers.place("machineGun", tile)!; // -50, invested 50
+    towers.upgrade(tower); // -38, invested 88
+    const before = economy.getMoney();
+    const refund = towers.sell(tower);
+    expect(refund).toBe(Math.floor(88 / 2)); // 44
+    expect(economy.getMoney()).toBe(before + 44);
+    // Tile is freed, so it can be built on again.
+    expect(towers.place("machineGun", tile)).not.toBeNull();
   });
 });
 

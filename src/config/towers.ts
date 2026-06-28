@@ -11,7 +11,8 @@ export interface TowerSpec {
   range: number;
   /** Shots per second. */
   fireRate: number;
-  targets: TargetClass;
+  /** Enemy classes this tower can hit. */
+  targets: TargetClass[];
   /** Splash radius in tiles (Mortar only). */
   splashRadius?: number;
   /** Render color and projectile speed (tiles/second). */
@@ -27,18 +28,18 @@ export const TOWERS: Record<TowerType, TowerSpec> = {
     damage: 5,
     range: 2.5,
     fireRate: 4,
-    targets: "ground",
+    targets: ["ground", "air"],
     color: 0x8ecae6,
     projectileColor: 0xffffff,
     projectileSpeed: 14,
   },
   mortar: {
     name: "Mortar",
-    cost: 120,
+    cost: 180,
     damage: 40,
     range: 3.5,
     fireRate: 0.5,
-    targets: "ground",
+    targets: ["ground"],
     splashRadius: 1.0,
     color: 0xfb8500,
     projectileColor: 0xffb703,
@@ -46,11 +47,11 @@ export const TOWERS: Record<TowerType, TowerSpec> = {
   },
   missiles: {
     name: "Missiles",
-    cost: 90,
+    cost: 160,
     damage: 35,
     range: 4.0,
     fireRate: 1,
-    targets: "air",
+    targets: ["air"],
     color: 0x90be6d,
     projectileColor: 0xf94144,
     projectileSpeed: 10,

@@ -25,13 +25,13 @@ Each wave SHALL contain a number of enemies equal to `6 + 2 * waveNumber`.
 
 ### Requirement: Enemy HP scaling
 
-Each wave SHALL scale enemy HP by a factor of `1 + 0.15 * (waveNumber - 1)`,
+Each wave SHALL scale enemy HP by a factor of `1 + 0.18 * (waveNumber - 1)`,
 applied to enemies at spawn.
 
 #### Scenario: HP multiplier
 
 - **WHEN** an enemy spawns during wave number `w`
-- **THEN** it is spawned with an HP scaling factor of `1 + 0.15 * (w - 1)`
+- **THEN** it is spawned with an HP scaling factor of `1 + 0.18 * (w - 1)`
 
 ### Requirement: Composition unlocks
 
@@ -83,32 +83,39 @@ floor (0.4 seconds).
 
 A wave SHALL be considered complete when all its enemies have been spawned and none
 remain alive on the field (each having died or reached the Base); on completion the
-clear bonus `20 + 5 * waveNumber` SHALL be granted to the economy.
+clear bonus `20 + 7 * waveNumber` SHALL be granted to the economy.
 
 #### Scenario: Completion grants bonus
 
 - **WHEN** the last enemy of wave `w` is removed (by death or base-arrival) and the
   spawn queue is empty
-- **THEN** the wave is marked complete and `20 + 5 * w` is granted to the economy
+- **THEN** the wave is marked complete and `20 + 7 * w` is granted to the economy
 
-### Requirement: Build phase between waves
+### Requirement: Auto-advancing build phase between waves
 
-Between waves the game SHALL enter a build phase during which no enemies spawn,
-until the player starts the next wave.
+Between waves the game SHALL enter a build phase during which no enemies spawn, and
+SHALL automatically start the next wave when a build countdown elapses (a longer
+countdown before the first wave, a shorter one between waves). The player does not
+need to manually start each wave.
 
 #### Scenario: Build phase before next wave
 
 - **WHEN** a wave completes
-- **THEN** the game enters a build phase with no active spawning until the next
-  wave is started
+- **THEN** the game enters a build phase with no active spawning and a countdown to
+  the next wave
+
+#### Scenario: Next wave auto-starts
+
+- **WHEN** the build countdown reaches zero
+- **THEN** the next wave starts automatically without player input
 
 ### Requirement: Wave state exposure
 
 The wave system SHALL expose its state to the UI without polling: it SHALL provide
-the current wave number, emit a `wave-changed` notification when the wave number
-changes and a `phase-changed` notification when the phase changes (build vs active),
-and expose a `startWave` operation that begins the next wave only during the build
-phase.
+the current wave number and the build-countdown remaining, emit a `wave-changed`
+notification when the wave number changes and a `phase-changed` notification when
+the phase changes (build vs active), and expose a `startWave` operation that skips
+the remaining countdown to begin the next wave, valid only during the build phase.
 
 #### Scenario: Wave change notifies
 
@@ -120,10 +127,11 @@ phase.
 - **WHEN** the phase changes between build and active
 - **THEN** a `phase-changed` notification is emitted with the new phase
 
-#### Scenario: Start wave only during build phase
+#### Scenario: Start wave skips the countdown during build phase
 
 - **WHEN** `startWave` is invoked during the build phase
-- **THEN** the next wave begins and the phase becomes active
+- **THEN** the remaining countdown is skipped, the next wave begins, and the phase
+  becomes active
 
 #### Scenario: Start wave ignored during active wave
 

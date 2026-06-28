@@ -18,9 +18,9 @@ target class) sourced from a single configuration.
 #### Scenario: Config matches the design values
 
 - **WHEN** the enemy configuration is read
-- **THEN** Soldier = 30 HP, 1.2 tiles/s, 5 reward, 1 lives cost, ground; Buggy = 50
-  HP, 2.0 tiles/s, 8 reward, 1 lives cost, ground; Tank = 200 HP, 0.6 tiles/s, 20
-  reward, 3 lives cost, ground; Plane = 80 HP, 1.8 tiles/s, 12 reward, 1 lives cost,
+- **THEN** Soldier = 30 HP, 1.2 tiles/s, 1 reward, 1 lives cost, ground; Buggy = 50
+  HP, 2.0 tiles/s, 2 reward, 1 lives cost, ground; Tank = 200 HP, 0.6 tiles/s, 4
+  reward, 3 lives cost, ground; Plane = 80 HP, 1.8 tiles/s, 2 reward, 1 lives cost,
   air
 
 ### Requirement: Ground enemies follow the path
