@@ -3,6 +3,9 @@ import { GRID, tileToPixel } from "../config/grid";
 import { generateMap, type GameMap } from "../systems/PathGenerator";
 import { randomSeed } from "../systems/Rng";
 import { Economy } from "../systems/Economy";
+import { EnemyManager } from "../systems/EnemyManager";
+import { ENEMIES } from "../config/enemies";
+import type { Vec2 } from "../types";
 
 /**
  * The world scene: owns the play field and the gameplay update loop. Later
@@ -12,6 +15,8 @@ import { Economy } from "../systems/Economy";
 export class GameScene extends Phaser.Scene {
   map!: GameMap;
   economy!: Economy;
+  enemyManager!: EnemyManager;
+  private enemyGfx!: Phaser.GameObjects.Graphics;
 
   constructor() {
     super("Game");
@@ -21,11 +26,19 @@ export class GameScene extends Phaser.Scene {
     this.map = generateMap(randomSeed());
     this.economy = new Economy();
 
+    const groundRoute: Vec2[] = this.map.path.map((t) =>
+      tileToPixel(t.col, t.row),
+    );
+    const airRoute: Vec2[] = [this.map.airRoute.from, this.map.airRoute.to];
+    this.enemyManager = new EnemyManager(groundRoute, airRoute, this.economy);
+
     // Run the HUD as a parallel overlay scene.
     this.scene.launch("HUD");
 
     this.drawGrid();
     this.drawMap();
+    // Enemies are drawn on their own layer, redrawn each frame.
+    this.enemyGfx = this.add.graphics();
   }
 
   /** Advance gameplay systems by elapsed seconds (frame-rate independent). */
@@ -34,10 +47,48 @@ export class GameScene extends Phaser.Scene {
     this.step(dt);
   }
 
-  /** Entry point for stepping gameplay systems. Systems (waves, enemies, towers)
-   *  are registered here in later changes. */
-  private step(_dt: number): void {
-    // No systems yet.
+  /** Step gameplay systems. Towers and waves register here in later changes. */
+  private step(dt: number): void {
+    this.enemyManager.update(dt);
+    this.drawEnemies();
+  }
+
+  private drawEnemies(): void {
+    const g = this.enemyGfx;
+    g.clear();
+    for (const enemy of this.enemyManager.getEnemies()) {
+      const spec = ENEMIES[enemy.type];
+      g.fillStyle(spec.color, 1);
+      if (enemy.targetClass === "air") {
+        // Planes drawn as triangles to read differently from ground units.
+        const r = spec.radius;
+        g.fillTriangle(
+          enemy.x,
+          enemy.y - r,
+          enemy.x - r,
+          enemy.y + r,
+          enemy.x + r,
+          enemy.y + r,
+        );
+      } else {
+        g.fillCircle(enemy.x, enemy.y, spec.radius);
+      }
+      this.drawHealthBar(g, enemy.x, enemy.y - spec.radius - 5, enemy.hp / enemy.maxHp);
+    }
+  }
+
+  private drawHealthBar(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    frac: number,
+  ): void {
+    const w = 20;
+    const h = 3;
+    g.fillStyle(0x000000, 0.6);
+    g.fillRect(x - w / 2, y, w, h);
+    g.fillStyle(0x4dff88, 1);
+    g.fillRect(x - w / 2, y, w * Phaser.Math.Clamp(frac, 0, 1), h);
   }
 
   private drawGrid(): void {
