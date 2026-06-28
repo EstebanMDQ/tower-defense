@@ -218,6 +218,16 @@ describe("TowerManager placement and upgrade", () => {
     // Tile is freed, so it can be built on again.
     expect(towers.place("machineGun", tile)).not.toBeNull();
   });
+
+  it("clearAll removes every tower and frees their tiles", () => {
+    const { map, towers } = setup(1000);
+    const tile = firstBuildable(map);
+    towers.place("machineGun", tile);
+    expect(towers.getTowers().length).toBe(1);
+    towers.clearAll();
+    expect(towers.getTowers().length).toBe(0);
+    expect(towers.place("machineGun", tile)).not.toBeNull(); // tile freed
+  });
 });
 
 describe("Combat integration", () => {

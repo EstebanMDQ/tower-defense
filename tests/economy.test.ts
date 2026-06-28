@@ -55,6 +55,24 @@ describe("Economy", () => {
     expect(onOver).toHaveBeenCalledTimes(1);
   });
 
+  it("tracks spend for carryover, and supports level-reset helpers", () => {
+    const e = new Economy(100, 20);
+    e.spend(30);
+    e.spend(20);
+    expect(e.getSpentThisLevel()).toBe(50);
+    e.earn(40); // earnings do not count as spend
+    expect(e.getSpentThisLevel()).toBe(50);
+
+    // Level reset: refill lives, set money to carryover, reset spend.
+    e.loseLives(5);
+    e.refillLives();
+    expect(e.getLives()).toBe(20);
+    e.setMoney(Math.floor(0.5 * e.getSpentThisLevel()));
+    expect(e.getMoney()).toBe(25);
+    e.resetSpend();
+    expect(e.getSpentThisLevel()).toBe(0);
+  });
+
   it("emits change notifications with new values", () => {
     const e = new Economy(100, 20);
     const onMoney = vi.fn();

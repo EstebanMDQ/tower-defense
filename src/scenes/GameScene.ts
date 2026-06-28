@@ -11,6 +11,7 @@ import { EnemyManager } from "../systems/EnemyManager";
 import { TowerManager } from "../systems/TowerManager";
 import { WaveManager } from "../systems/WaveManager";
 import { ENEMIES } from "../config/enemies";
+import { LEVELS } from "../config/levels";
 import { TOWERS, type TowerType } from "../config/towers";
 import type { Tower } from "../entities/Tower";
 import type { TileCoord, Vec2 } from "../types";
@@ -43,6 +44,7 @@ export class GameScene extends Phaser.Scene {
   paused = false;
   speedFactor = 1;
 
+  private staticGfx!: Phaser.GameObjects.Graphics;
   private dynamicGfx!: Phaser.GameObjects.Graphics;
   private hoverTile: TileCoord | null = null;
 
@@ -79,6 +81,7 @@ export class GameScene extends Phaser.Scene {
     this.waveManager.onPhaseChanged((phase) => {
       if (phase === "active") audio.play("waveStart");
     });
+    this.waveManager.onLevelComplete((next) => this.advanceLevel(next));
 
     this.economy.onGameOver(() => {
       audio.play("gameOver");
@@ -89,11 +92,36 @@ export class GameScene extends Phaser.Scene {
 
     this.scene.launch("HUD");
 
+    this.staticGfx = this.add.graphics();
     this.drawStatic();
     this.dynamicGfx = this.add.graphics();
     this.setupInput();
 
     music.start(); // looping placeholder song (silent until composed)
+  }
+
+  /**
+   * Advance to a new level (during the build phase after wave 10): salvage a
+   * percentage of the level's spend, generate a new branching map, wipe towers,
+   * reset lives, and reset the carryover spend tracker. Difficulty continues via
+   * the wave manager's global wave index.
+   */
+  private advanceLevel(level: number): void {
+    const carry = Math.floor(LEVELS.carryoverPct * this.economy.getSpentThisLevel());
+
+    this.map = generateMap(randomSeed(), level);
+    const airRoute: Vec2[] = [this.map.airRoute.from, this.map.airRoute.to];
+    this.enemyManager.setRoutes(() => sampleGroundRoute(this.map), airRoute);
+    this.enemyManager.clear();
+    this.towerManager.setMap(this.map);
+    this.towerManager.clearAll();
+
+    this.economy.refillLives();
+    this.economy.setMoney(carry);
+    this.economy.resetSpend();
+
+    this.selectedTower = null;
+    this.drawStatic(); // redraw the new map
   }
 
   update(_time: number, delta: number): void {
@@ -146,7 +174,8 @@ export class GameScene extends Phaser.Scene {
   // --- Rendering -------------------------------------------------------------
 
   private drawStatic(): void {
-    const g = this.add.graphics();
+    const g = this.staticGfx;
+    g.clear();
     // Grid.
     g.lineStyle(1, 0x21384d, 1);
     for (let c = 0; c <= GRID.cols; c++) {

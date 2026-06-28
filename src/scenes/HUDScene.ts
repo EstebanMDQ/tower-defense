@@ -226,6 +226,9 @@ export class HUDScene extends Phaser.Scene {
       this.sellButton.setVisible(false);
     }
 
+    this.waveText.setText(
+      `L${game.waveManager.getLevel()} W${game.waveManager.getWaveInLevel()}`,
+    );
     this.pauseButton.setText(game.paused ? "Resume" : "Pause");
     this.speedButton.setText(`${game.speedFactor}x`);
     this.muteButton.setText(audio.isMuted() ? "Mut" : "Snd");

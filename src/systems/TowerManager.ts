@@ -81,10 +81,24 @@ export class TowerManager {
   onFire?: (type: TowerType) => void;
 
   constructor(
-    private readonly map: GameMap,
+    private map: GameMap,
     private readonly economy: Economy,
     private readonly enemyManager: EnemyManager,
   ) {}
+
+  /** Point the manager at a new map (e.g. on a level transition). */
+  setMap(map: GameMap): void {
+    this.map = map;
+  }
+
+  /** Remove all towers and in-flight effects, freeing every tile. */
+  clearAll(): void {
+    this.towers = [];
+    this.projectiles = [];
+    this.beams = [];
+    this.blasts = [];
+    this.occupied.clear();
+  }
 
   /** Whether a tower of this type could be placed on the tile right now. */
   canPlace(type: TowerType, tile: TileCoord): boolean {

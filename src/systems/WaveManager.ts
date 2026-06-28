@@ -7,6 +7,7 @@ import {
   perfectionBonus,
   spawnInterval,
 } from "../config/waves";
+import { LEVELS } from "../config/levels";
 import type { EnemyType } from "../config/enemies";
 import { mulberry32 } from "./Rng";
 import type { EnemyManager } from "./EnemyManager";
@@ -21,9 +22,11 @@ type Listener<T> = (payload: T) => void;
  * unlocked pool is drawn `enemyCount(wave)` times by weighted selection, seeded
  * by the wave so the same wave always yields the same multiset.
  */
-export function generateComposition(wave: number): EnemyType[] {
+export function generateComposition(
+  wave: number,
+  count: number = enemyCount(wave),
+): EnemyType[] {
   const rng = mulberry32((wave * 2654435761) >>> 0);
-  const count = enemyCount(wave);
   const pool = COMPOSITION.filter((e) => wave >= e.unlockWave).map((e) => ({
     type: e.type,
     w: e.weight(wave),
@@ -66,14 +69,27 @@ export class WaveManager {
 
   private waveListeners: Listener<number>[] = [];
   private phaseListeners: Listener<WavePhase>[] = [];
+  private levelListeners: Listener<number>[] = [];
 
   constructor(
     private readonly enemyManager: EnemyManager,
     private readonly economy: Economy,
   ) {}
 
+  /** Continuous global wave index (across all levels). */
   getWave(): number {
     return this.wave;
+  }
+
+  /** Current level (1-based). */
+  getLevel(): number {
+    return Math.floor(Math.max(0, this.wave - 1) / LEVELS.wavesPerLevel) + 1;
+  }
+
+  /** Wave within the current level (1..wavesPerLevel), or 0 before the first wave. */
+  getWaveInLevel(): number {
+    if (this.wave === 0) return 0;
+    return ((this.wave - 1) % LEVELS.wavesPerLevel) + 1;
   }
 
   getPhase(): WavePhase {
@@ -90,7 +106,8 @@ export class WaveManager {
     if (this.phase === "active") return;
     this.wave++;
     this.emitWave();
-    this.queue = generateComposition(this.wave);
+    // Count scales with the per-level wave; HP and composition use the global index.
+    this.queue = generateComposition(this.wave, enemyCount(this.getWaveInLevel()));
     this.hp = hpScale(this.wave);
     this.interval = spawnInterval(this.wave);
     this.spawnTimer = 0; // first enemy spawns on the next update
@@ -122,6 +139,11 @@ export class WaveManager {
       this.economy.earn(perfectionBonus(untouched));
       this.prepRemaining = WAVES.betweenWaves;
       this.setPhase("build");
+      // After the last wave of a level, signal a new level (handled in build phase).
+      if (this.wave % LEVELS.wavesPerLevel === 0) {
+        const nextLevel = Math.floor(this.wave / LEVELS.wavesPerLevel) + 1;
+        this.levelListeners.forEach((l) => l(nextLevel));
+      }
     }
   }
 
@@ -131,6 +153,11 @@ export class WaveManager {
 
   onPhaseChanged(listener: Listener<WavePhase>): void {
     this.phaseListeners.push(listener);
+  }
+
+  /** Fired with the new level number after the last wave of a level is cleared. */
+  onLevelComplete(listener: Listener<number>): void {
+    this.levelListeners.push(listener);
   }
 
   private setPhase(phase: WavePhase): void {

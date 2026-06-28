@@ -11,6 +11,9 @@ export class Economy {
   private money: number;
   private lives: number;
   private over = false;
+  /** Money spent (towers/upgrades) since the last reset, for level carryover. */
+  private spentThisLevel = 0;
+  private readonly startingLives: number;
 
   private moneyListeners: Listener<number>[] = [];
   private livesListeners: Listener<number>[] = [];
@@ -22,6 +25,7 @@ export class Economy {
   ) {
     this.money = startingMoney;
     this.lives = startingLives;
+    this.startingLives = startingLives;
   }
 
   getMoney(): number {
@@ -44,8 +48,30 @@ export class Economy {
   spend(cost: number): boolean {
     if (cost < 0 || !this.canAfford(cost)) return false;
     this.money -= cost;
+    this.spentThisLevel += cost;
     this.emitMoney();
     return true;
+  }
+
+  /** Money spent on towers/upgrades since the last reset (for level carryover). */
+  getSpentThisLevel(): number {
+    return this.spentThisLevel;
+  }
+
+  resetSpend(): void {
+    this.spentThisLevel = 0;
+  }
+
+  /** Set the money balance directly (e.g. carryover at a new level). */
+  setMoney(amount: number): void {
+    this.money = Math.max(0, Math.floor(amount));
+    this.emitMoney();
+  }
+
+  /** Reset lives to the starting amount (e.g. at a new level). */
+  refillLives(): void {
+    this.lives = this.startingLives;
+    this.emitLives();
   }
 
   /** Grant a money reward (positive amounts only). */

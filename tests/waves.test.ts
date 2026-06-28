@@ -182,3 +182,54 @@ describe("WaveManager", () => {
     expect(b.economy.getMoney()).toBe(clearBonus(1) + perfectionBonus(false));
   });
 });
+
+describe("Levels", () => {
+  function setup() {
+    const economy = new Economy(0, 20);
+    const enemies = new EnemyManager(() => groundRoute, airRoute, economy);
+    const waves = new WaveManager(enemies, economy);
+    return { economy, enemies, waves };
+  }
+
+  /** Run `n` waves, killing enemies immediately so no lives are lost. */
+  function runWaves(n: number, ctx: ReturnType<typeof setup>): void {
+    for (let i = 0; i < n; i++) {
+      ctx.waves.startWave();
+      let guard = 0;
+      while (ctx.waves.getPhase() === "active" && guard < 8000) {
+        ctx.waves.update(1 / 60);
+        for (const e of ctx.enemies.getEnemies()) e.takeDamage(e.maxHp);
+        ctx.enemies.update(1 / 60);
+        guard++;
+      }
+    }
+  }
+
+  it("derives level and wave-in-level, signaling a new level after wave 10", () => {
+    const ctx = setup();
+    expect(ctx.waves.getLevel()).toBe(1);
+    expect(ctx.waves.getWaveInLevel()).toBe(0);
+
+    const onLevel = vi.fn();
+    ctx.waves.onLevelComplete(onLevel);
+
+    runWaves(10, ctx); // clear a whole level
+    expect(ctx.waves.getWave()).toBe(10);
+    expect(ctx.waves.getLevel()).toBe(1);
+    expect(ctx.waves.getWaveInLevel()).toBe(10);
+    expect(onLevel).toHaveBeenCalledWith(2);
+
+    ctx.waves.startWave(); // first wave of level 2
+    expect(ctx.waves.getWave()).toBe(11);
+    expect(ctx.waves.getLevel()).toBe(2);
+    expect(ctx.waves.getWaveInLevel()).toBe(1);
+  });
+
+  it("count uses the per-level wave; roster uses the global index", () => {
+    // Level 2 wave 1: count is enemyCount(1) = 8, but global wave 11 unlocks the
+    // full roster, so it is not soldiers-only.
+    const comp = generateComposition(11, enemyCount(1));
+    expect(comp.length).toBe(8);
+    expect(comp.every((t) => t === "soldier")).toBe(false);
+  });
+});

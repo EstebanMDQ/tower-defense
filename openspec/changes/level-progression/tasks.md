@@ -39,32 +39,32 @@
 
 ## 5. Difficulty and level numbering
 
-- [ ] 5.1 In `WaveManager`, keep a continuous `globalWave`; derive `level` and
+- [x] 5.1 In `WaveManager`, keep a continuous `globalWave`; derive `level` and
       `waveInLevel`; count uses `waveInLevel`, HP scaling and composition use
       `globalWave`; expose `getLevel()` / `getWaveInLevel()`
-- [ ] 5.2 Emit `onLevelComplete(nextLevel)` when the cleared wave is `waveInLevel 10`
+- [x] 5.2 Emit `onLevelComplete(nextLevel)` when the cleared wave is `waveInLevel 10`
 
 ## 6. Economy support
 
-- [ ] 6.1 In `Economy`, accumulate `spentThisLevel` on `spend()`; add `resetSpend()`,
+- [x] 6.1 In `Economy`, accumulate `spentThisLevel` on `spend()`; add `resetSpend()`,
       `spentThisLevel()`, `refillLives()`, and `setMoney(n)`
 
 ## 7. Level transition (GameScene)
 
-- [ ] 7.1 On `onLevelComplete`, during the build phase: compute
+- [x] 7.1 On `onLevelComplete`, during the build phase: compute
       `carry = floor(CARRYOVER_PCT * economy.spentThisLevel())`
-- [ ] 7.2 Regenerate the map with the new level's branch count; redraw; re-point
+- [x] 7.2 Regenerate the map with the new level's branch count; redraw; re-point
       `EnemyManager.setRoutes(...)` and `TowerManager.setMap(...)`
-- [ ] 7.3 `towerManager.clearAll()`; `economy.refillLives()`;
+- [x] 7.3 `towerManager.clearAll()`; `economy.refillLives()`;
       `economy.setMoney(carry)`; `economy.resetSpend()`
-- [ ] 7.4 Add config `CARRYOVER_PCT` (0.5) and `WAVES_PER_LEVEL` (10)
-- [ ] 7.5 HUD shows `Level N` and the wave within the level
+- [x] 7.4 Add config `CARRYOVER_PCT` (0.5) and `WAVES_PER_LEVEL` (10)
+- [x] 7.5 HUD shows `Level N` and the wave within the level
 
 ## 8. Stage B verification
 
-- [ ] 8.1 Unit test: `globalWave` math (level/waveInLevel boundaries); HP/composition
+- [x] 8.1 Unit test: `globalWave` math (level/waveInLevel boundaries); HP/composition
       use global index, count uses waveInLevel
-- [ ] 8.2 Unit test: a level transition resets lives, sets money to the carryover
+- [x] 8.2 Unit test: a level transition resets lives, sets money to the carryover
       percentage of spend, resets spend, and clears towers
-- [ ] 8.3 Typecheck, tests, build pass; full loop playable (10 waves -> new branched
+- [x] 8.3 Typecheck, tests, build pass; full loop playable (10 waves -> new branched
       map, towers gone, HP full, salvage money, tougher enemies)
