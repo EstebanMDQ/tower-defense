@@ -60,6 +60,14 @@ export class Tower {
     return (this.spec.splashRadius ?? 0) * GRID.tileSize;
   }
 
+  get attack(): "single" | "splash" | "pierce" {
+    return this.spec.attack ?? "single";
+  }
+
+  get pierceWidthPx(): number {
+    return (this.spec.pierceWidth ?? 0) * GRID.tileSize;
+  }
+
   canUpgrade(): boolean {
     return this.level < MAX_LEVEL;
   }

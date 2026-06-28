@@ -96,6 +96,7 @@ export class GameScene extends Phaser.Scene {
     kb?.on("keydown-ONE", () => (this.selectedTowerType = "machineGun"));
     kb?.on("keydown-TWO", () => (this.selectedTowerType = "mortar"));
     kb?.on("keydown-THREE", () => (this.selectedTowerType = "missiles"));
+    kb?.on("keydown-FOUR", () => (this.selectedTowerType = "sniper"));
     kb?.on("keydown-SPACE", () => this.waveManager.startWave());
   }
 
@@ -160,8 +161,11 @@ export class GameScene extends Phaser.Scene {
     g.clear();
     this.drawTowers(g);
     this.drawRangePreview(g);
+    this.drawBlasts(g);
+    this.drawBeams(g);
     this.drawProjectiles(g);
     this.drawEnemies(g);
+    this.drawParticles(g);
   }
 
   private drawTowers(g: Phaser.GameObjects.Graphics): void {
@@ -201,29 +205,109 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private drawBlasts(g: Phaser.GameObjects.Graphics): void {
+    for (const b of this.towerManager.getBlasts()) {
+      const t = Phaser.Math.Clamp(b.age / b.duration, 0, 1);
+      const alpha = 1 - t;
+      const radius = b.radiusPx * (0.2 + 0.8 * t);
+      // Soft flash early, expanding ring throughout.
+      g.fillStyle(0xffb703, alpha * 0.35);
+      g.fillCircle(b.x, b.y, radius);
+      g.lineStyle(2, 0xfb8500, alpha);
+      g.strokeCircle(b.x, b.y, radius);
+    }
+  }
+
+  private drawBeams(g: Phaser.GameObjects.Graphics): void {
+    for (const b of this.towerManager.getBeams()) {
+      const alpha = Phaser.Math.Clamp(1 - b.age / b.duration, 0, 1);
+      g.lineStyle(3, 0xff7bef, alpha);
+      g.lineBetween(b.x1, b.y1, b.x2, b.y2);
+    }
+  }
+
   private drawEnemies(g: Phaser.GameObjects.Graphics): void {
     for (const enemy of this.enemyManager.getEnemies()) {
       const spec = ENEMIES[enemy.type];
-      g.fillStyle(spec.color, 1);
-      if (enemy.targetClass === "air") {
-        const r = spec.radius;
-        g.fillTriangle(
-          enemy.x,
-          enemy.y - r,
-          enemy.x - r,
-          enemy.y + r,
-          enemy.x + r,
-          enemy.y + r,
-        );
-      } else {
-        g.fillCircle(enemy.x, enemy.y, spec.radius);
+      const r = spec.radius;
+      const cos = Math.cos(enemy.angle);
+      const sin = Math.sin(enemy.angle);
+      // Local frame: forward = +x. Rotate by the facing angle around the center.
+      const rot = (lx: number, ly: number) => ({
+        x: enemy.x + lx * cos - ly * sin,
+        y: enemy.y + lx * sin + ly * cos,
+      });
+
+      const v = enemy.variant;
+      const bodyColor = v?.bodyColor ?? spec.color;
+      const accent = v?.accentColor ?? 0xffffff;
+
+      // Body shape (polygon for vehicles/planes, circle for the soldier).
+      let points: { x: number; y: number }[] | null = null;
+      switch (enemy.type) {
+        case "plane":
+          points = [rot(r, 0), rot(-0.7 * r, -0.8 * r), rot(-0.7 * r, 0.8 * r)];
+          break;
+        case "tank":
+          points = [
+            rot(r, -0.7 * r),
+            rot(r, 0.7 * r),
+            rot(-r, 0.7 * r),
+            rot(-r, -0.7 * r),
+          ];
+          break;
+        case "buggy":
+          points = [
+            rot(r, -0.6 * r),
+            rot(r, 0.6 * r),
+            rot(-r, 0.6 * r),
+            rot(-r, -0.6 * r),
+          ];
+          break;
+        default:
+          points = null;
       }
-      this.drawHealthBar(
-        g,
-        enemy.x,
-        enemy.y - spec.radius - 5,
-        enemy.hp / enemy.maxHp,
-      );
+
+      g.fillStyle(bodyColor, 1);
+      if (points) g.fillPoints(points, true);
+      else g.fillCircle(enemy.x, enemy.y, r);
+
+      if (v?.outline) {
+        g.lineStyle(1.5, accent, 1);
+        if (points) g.strokePoints(points, true);
+        else g.strokeCircle(enemy.x, enemy.y, r);
+      }
+
+      // Type-specific accent: tank turret / soldier facing nub.
+      if (enemy.type === "tank" || enemy.type === "soldier") {
+        const a0 = rot(0, 0);
+        const a1 = rot((enemy.type === "tank" ? 0.95 : 1) * r, 0);
+        g.lineStyle(enemy.type === "tank" ? 3 : 2, accent, 1);
+        g.lineBetween(a0.x, a0.y, a1.x, a1.y);
+      }
+
+      // Small accent stripes along the forward axis.
+      if (v && v.stripes > 0) {
+        g.fillStyle(accent, 1);
+        for (let i = 0; i < v.stripes; i++) {
+          const p = rot(-0.3 * r + i * 0.3 * r, 0);
+          g.fillCircle(p.x, p.y, 1.5);
+        }
+      }
+
+      this.drawHealthBar(g, enemy.x, enemy.y - r - 5, enemy.hp / enemy.maxHp);
+    }
+  }
+
+  private drawParticles(g: Phaser.GameObjects.Graphics): void {
+    for (const p of this.enemyManager.getParticles()) {
+      const alpha = Phaser.Math.Clamp(1 - p.age / p.life, 0, 1);
+      g.fillStyle(p.color, alpha);
+      if (p.shape === "square") {
+        g.fillRect(p.x - p.size, p.y - p.size, p.size * 2, p.size * 2);
+      } else {
+        g.fillCircle(p.x, p.y, p.size);
+      }
     }
   }
 

@@ -1,6 +1,9 @@
 import type { TargetClass } from "../types";
 
-export type TowerType = "machineGun" | "mortar" | "missiles";
+export type TowerType = "machineGun" | "mortar" | "missiles" | "sniper";
+
+/** How a tower's shot resolves: single target, splash area, or piercing line. */
+export type AttackMode = "single" | "splash" | "pierce";
 
 export interface TowerSpec {
   name: string;
@@ -13,8 +16,12 @@ export interface TowerSpec {
   fireRate: number;
   /** Enemy classes this tower can hit. */
   targets: TargetClass[];
-  /** Splash radius in tiles (Mortar only). */
+  /** Shot resolution (default "single"). */
+  attack?: AttackMode;
+  /** Splash radius in tiles (splash attack only). */
   splashRadius?: number;
+  /** Pierce band half-width in tiles (pierce attack only). */
+  pierceWidth?: number;
   /** Render color and projectile speed (tiles/second). */
   color: number;
   projectileColor: number;
@@ -40,6 +47,7 @@ export const TOWERS: Record<TowerType, TowerSpec> = {
     range: 3.5,
     fireRate: 0.5,
     targets: ["ground"],
+    attack: "splash",
     splashRadius: 1.0,
     color: 0xfb8500,
     projectileColor: 0xffb703,
@@ -56,6 +64,25 @@ export const TOWERS: Record<TowerType, TowerSpec> = {
     projectileColor: 0xf94144,
     projectileSpeed: 10,
   },
+  sniper: {
+    name: "Sniper",
+    cost: 250,
+    damage: 120,
+    range: 8.0,
+    fireRate: 0.2,
+    targets: ["ground", "air"],
+    attack: "pierce",
+    pierceWidth: 0.4,
+    color: 0xb5179e,
+    // Hitscan - projectile fields are unused placeholders.
+    projectileColor: 0xff7bef,
+    projectileSpeed: 0,
+  },
 };
 
-export const TOWER_TYPES: TowerType[] = ["machineGun", "mortar", "missiles"];
+export const TOWER_TYPES: TowerType[] = [
+  "machineGun",
+  "mortar",
+  "missiles",
+  "sniper",
+];

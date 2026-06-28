@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Tower } from "../src/entities/Tower";
-import { TowerManager } from "../src/systems/TowerManager";
+import { TowerManager, pierceHits } from "../src/systems/TowerManager";
 import { acquireTarget } from "../src/systems/TargetingSystem";
 import { EnemyManager } from "../src/systems/EnemyManager";
 import { Economy } from "../src/systems/Economy";
@@ -41,6 +41,18 @@ describe("Tower config and stats", () => {
       splashRadius: 1.0,
     });
     expect(TOWERS.missiles).toMatchObject({ cost: 160, targets: ["air"] });
+  });
+
+  it("includes the Sniper with a piercing line and both target classes", () => {
+    expect(TOWERS.sniper).toMatchObject({
+      cost: 250,
+      damage: 120,
+      range: 8,
+      fireRate: 0.2,
+      targets: ["ground", "air"],
+      attack: "pierce",
+      pierceWidth: 0.4,
+    });
   });
 
   it("applies upgrade multipliers (tier-3 Mortar example)", () => {
@@ -89,6 +101,54 @@ describe("Targeting", () => {
   it("machine gun targets both ground and air", () => {
     expect(acquireTarget(0, 0, 1000, ["ground", "air"], [enemyA])).toBe(enemyA);
     expect(acquireTarget(0, 0, 1000, ["ground", "air"], [plane])).toBe(plane);
+  });
+});
+
+describe("Sniper pierce (pierceHits)", () => {
+  // Tower at origin firing along +x (ux=1, uy=0), range 400, band 20.
+  const onLineNear = makeEnemy("soldier", 50, 0, 0);
+  const onLineFar = makeEnemy("soldier", 300, 5, 0); // within band 20
+  const offLine = makeEnemy("soldier", 100, 200, 0); // perp 200 > band
+  const behind = makeEnemy("soldier", -50, 0, 0); // proj < 0
+  const beyond = makeEnemy("soldier", 500, 0, 0); // proj > range
+  const plane = makeEnemy("plane", 150, 0, 0);
+
+  it("hits every eligible enemy along the line within range and band", () => {
+    const hits = pierceHits(
+      0,
+      0,
+      1,
+      0,
+      400,
+      20,
+      ["ground", "air"],
+      [onLineNear, onLineFar, offLine, behind, beyond, plane],
+    );
+    expect(hits).toContain(onLineNear);
+    expect(hits).toContain(onLineFar);
+    expect(hits).toContain(plane); // both classes
+  });
+
+  it("does not hit off-line, behind, or beyond-range enemies", () => {
+    const hits = pierceHits(
+      0,
+      0,
+      1,
+      0,
+      400,
+      20,
+      ["ground", "air"],
+      [onLineNear, offLine, behind, beyond],
+    );
+    expect(hits).not.toContain(offLine);
+    expect(hits).not.toContain(behind);
+    expect(hits).not.toContain(beyond);
+  });
+
+  it("respects target classes", () => {
+    const hits = pierceHits(0, 0, 1, 0, 400, 20, ["ground"], [plane, onLineNear]);
+    expect(hits).toContain(onLineNear);
+    expect(hits).not.toContain(plane);
   });
 });
 
@@ -182,6 +242,67 @@ describe("Combat integration", () => {
       towers.update(1 / 60);
     }
     expect(enemy.alive).toBe(false);
+  });
+});
+
+describe("Mortar blast effect", () => {
+  function combatSetup() {
+    const map = generateMap(7);
+    const economy = new Economy(1000, 20);
+    const enemies = new EnemyManager(
+      [
+        { x: 100, y: 100 },
+        { x: 100, y: 400 },
+      ],
+      airRoute,
+      economy,
+    );
+    const towers = new TowerManager(map, economy, enemies);
+    return { map, economy, enemies, towers };
+  }
+
+  it("records a blast sized to the splash radius on impact", () => {
+    const { map, enemies, towers } = combatSetup();
+    const tower = towers.place("mortar", firstBuildable(map))!;
+    const enemy = enemies.spawn("soldier");
+    enemy.x = tower.x;
+    enemy.y = tower.y;
+
+    let blast = null;
+    for (let t = 0; t < 5 && !blast; t += 1 / 60) {
+      towers.update(1 / 60);
+      blast = towers.getBlasts()[0] ?? null;
+    }
+    expect(blast).not.toBeNull();
+    expect(blast!.radiusPx).toBeCloseTo(tower.splashRadiusPx);
+  });
+
+  it("removes the blast after its duration, and single-target towers make none", () => {
+    const { map, enemies, towers } = combatSetup();
+    // Machine gun (single target) -> no blast ever.
+    const mg = towers.place("machineGun", firstBuildable(map))!;
+    const enemy = enemies.spawn("soldier");
+    enemy.x = mg.x;
+    enemy.y = mg.y;
+    for (let t = 0; t < 2; t += 1 / 60) towers.update(1 / 60);
+    expect(towers.getBlasts().length).toBe(0);
+
+    // Mortar blast eventually expires.
+    const { map: m2, enemies: e2, towers: t2 } = combatSetup();
+    const mortar = t2.place("mortar", firstBuildable(m2))!;
+    const en2 = e2.spawn("soldier");
+    en2.x = mortar.x;
+    en2.y = mortar.y;
+    let appeared = false;
+    for (let t = 0; t < 5; t += 1 / 60) {
+      t2.update(1 / 60);
+      if (t2.getBlasts().length > 0) appeared = true;
+      if (appeared && t2.getBlasts().length === 0) break;
+    }
+    expect(appeared).toBe(true);
+    // Run well past the blast duration; it should be gone.
+    for (let t = 0; t < 1; t += 1 / 60) t2.update(1 / 60);
+    expect(t2.getBlasts().length).toBe(0);
   });
 });
 

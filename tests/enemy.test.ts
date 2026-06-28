@@ -3,6 +3,7 @@ import { Enemy } from "../src/entities/Enemy";
 import { EnemyManager } from "../src/systems/EnemyManager";
 import { Economy } from "../src/systems/Economy";
 import { ENEMIES } from "../src/config/enemies";
+import { EXPLOSIONS } from "../src/config/explosions";
 import { GRID } from "../src/config/grid";
 import type { Vec2 } from "../src/types";
 
@@ -110,5 +111,86 @@ describe("EnemyManager outcomes", () => {
     expect(economy.getLives()).toBe(17);
     expect(economy.getMoney()).toBe(0);
     expect(mgr.isEmpty()).toBe(true);
+  });
+});
+
+describe("Enemy facing", () => {
+  it("initial facing points toward the first target", () => {
+    expect(
+      new Enemy("soldier", [
+        { x: 0, y: 0 },
+        { x: 50, y: 0 },
+      ]).angle,
+    ).toBeCloseTo(0);
+    expect(
+      new Enemy("soldier", [
+        { x: 0, y: 0 },
+        { x: 0, y: 50 },
+      ]).angle,
+    ).toBeCloseTo(Math.PI / 2);
+  });
+
+  it("facing follows the movement direction", () => {
+    const e = new Enemy("soldier", [
+      { x: 0, y: 0 },
+      { x: 200, y: 0 },
+    ]);
+    for (let t = 0; t < 0.5; t += 1 / 60) e.update(1 / 60);
+    expect(e.angle).toBeCloseTo(0, 1);
+  });
+
+  it("a low-turn-rate tank rotates gradually through a corner", () => {
+    const e = new Enemy("tank", [
+      { x: 0, y: 0 },
+      { x: 100, y: 0 },
+      { x: 100, y: 300 },
+    ]);
+    expect(e.angle).toBeCloseTo(0); // initial heading toward (100,0)
+    const angles: number[] = [];
+    for (let t = 0; t < 12; t += 1 / 60) {
+      e.update(1 / 60);
+      angles.push(e.angle);
+    }
+    // Passed through an intermediate facing (not an instant snap 0 -> pi/2).
+    expect(angles.some((a) => a > 0.1 && a < Math.PI / 2 - 0.1)).toBe(true);
+    // Settles facing +y (down) on the second leg.
+    expect(e.angle).toBeCloseTo(Math.PI / 2, 1);
+  });
+});
+
+describe("Enemy death explosions", () => {
+  it("spawns a type-specific burst at the kill position", () => {
+    const economy = new Economy(0, 20);
+    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const enemy = mgr.spawn("soldier");
+    enemy.takeDamage(enemy.maxHp); // kill it
+    mgr.update(1 / 60);
+
+    const particles = mgr.getParticles();
+    expect(particles.length).toBe(EXPLOSIONS.soldier.count);
+    expect(particles[0].x).toBeCloseTo(enemy.x);
+    expect(particles[0].y).toBeCloseTo(enemy.y);
+    // Reward is still granted, unaffected by the effect.
+    expect(economy.getMoney()).toBe(ENEMIES.soldier.reward);
+  });
+
+  it("does not explode when an enemy reaches the base (leak)", () => {
+    const economy = new Economy(0, 20);
+    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    mgr.spawn("tank");
+    for (let t = 0; t < 60; t += 1 / 60) mgr.update(1 / 60);
+    expect(mgr.getParticles().length).toBe(0);
+  });
+
+  it("removes particles after their lifetime", () => {
+    const economy = new Economy(0, 20);
+    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const enemy = mgr.spawn("tank");
+    enemy.takeDamage(enemy.maxHp);
+    mgr.update(1 / 60);
+    expect(mgr.getParticles().length).toBe(EXPLOSIONS.tank.count);
+    // Run past the tank explosion lifetime.
+    for (let t = 0; t < 1; t += 1 / 60) mgr.update(1 / 60);
+    expect(mgr.getParticles().length).toBe(0);
   });
 });

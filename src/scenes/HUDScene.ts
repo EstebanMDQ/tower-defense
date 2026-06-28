@@ -122,10 +122,10 @@ export class HUDScene extends Phaser.Scene {
       this.fullscreenButton.setVisible(false);
     }
 
-    // Tower palette.
+    // Tower palette - four towers across one row.
     const paletteY = top + 38;
-    const bw = 138;
-    const positions = [8, 150, 292];
+    const bw = 100;
+    const positions = [8, 114, 220, 326];
     TOWER_TYPES.forEach((type, i) => {
       const spec = TOWERS[type];
       const button = new Button(

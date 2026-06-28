@@ -13,6 +13,8 @@ export interface ProjectileOptions {
   impact?: Vec2;
   /** Splash radius in pixels; when > 0, damages all eligible enemies in radius. */
   splashRadiusPx?: number;
+  /** Called on a splash impact (regardless of enemies hit), e.g. to spawn a blast VFX. */
+  onImpact?: (x: number, y: number, splashRadiusPx: number) => void;
 }
 
 /**
@@ -81,6 +83,8 @@ export class Projectile {
         const dy = e.y - this.y;
         if (dx * dx + dy * dy <= r2) e.takeDamage(this.opts.damage);
       }
+      // Fire the impact hook regardless of how many enemies were hit (miss still flashes).
+      this.opts.onImpact?.(this.x, this.y, splash);
     } else if (this.opts.target) {
       this.opts.target.takeDamage(this.opts.damage);
     }

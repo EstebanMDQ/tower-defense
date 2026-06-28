@@ -106,7 +106,7 @@ export class WaveManager {
       this.spawnTimer -= dt;
       while (this.spawnTimer <= 0 && this.queue.length > 0) {
         const type = this.queue.shift() as EnemyType;
-        this.enemyManager.spawn(type, this.hp);
+        this.enemyManager.spawn(type, this.hp, this.wave);
         this.spawnTimer += this.interval;
       }
     }

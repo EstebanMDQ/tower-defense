@@ -12,6 +12,8 @@ export interface EnemySpec {
   /** Lives subtracted from the base on arrival. */
   livesCost: number;
   targetClass: TargetClass;
+  /** How fast the unit rotates toward its heading (radians/second). */
+  turnRate: number;
   /** Render color and radius (px) for the procedural shape. */
   color: number;
   radius: number;
@@ -24,6 +26,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
     reward: 1,
     livesCost: 1,
     targetClass: "ground",
+    turnRate: 12,
     color: 0xffd166,
     radius: 8,
   },
@@ -33,6 +36,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
     reward: 2,
     livesCost: 1,
     targetClass: "ground",
+    turnRate: 8,
     color: 0xef476f,
     radius: 9,
   },
@@ -42,6 +46,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
     reward: 4,
     livesCost: 3,
     targetClass: "ground",
+    turnRate: 3,
     color: 0x06d6a0,
     radius: 12,
   },
@@ -51,6 +56,7 @@ export const ENEMIES: Record<EnemyType, EnemySpec> = {
     reward: 2,
     livesCost: 1,
     targetClass: "air",
+    turnRate: 10,
     color: 0x118ab2,
     radius: 10,
   },
