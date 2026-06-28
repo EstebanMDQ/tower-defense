@@ -76,7 +76,7 @@ describe("composition", () => {
 describe("WaveManager", () => {
   function setup() {
     const economy = new Economy(0, 20);
-    const enemies = new EnemyManager(groundRoute, airRoute, economy);
+    const enemies = new EnemyManager(() => groundRoute, airRoute, economy);
     const waves = new WaveManager(enemies, economy);
     return { economy, enemies, waves };
   }

@@ -94,7 +94,7 @@ describe("Enemy damage", () => {
 describe("EnemyManager outcomes", () => {
   it("grants the reward when an enemy dies", () => {
     const economy = new Economy(0, 20);
-    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const mgr = new EnemyManager(() => groundRoute, airRoute, economy);
     const e = mgr.spawn("tank");
     e.takeDamage(e.maxHp);
     mgr.update(1 / 60);
@@ -104,7 +104,7 @@ describe("EnemyManager outcomes", () => {
 
   it("applies the lives cost on base arrival without a reward", () => {
     const economy = new Economy(0, 20);
-    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const mgr = new EnemyManager(() => groundRoute, airRoute, economy);
     mgr.spawn("tank"); // lives cost 3
     // Run long enough to reach the base.
     for (let t = 0; t < 60; t += 1 / 60) mgr.update(1 / 60);
@@ -161,7 +161,7 @@ describe("Enemy facing", () => {
 describe("Enemy death explosions", () => {
   it("spawns a type-specific burst at the kill position", () => {
     const economy = new Economy(0, 20);
-    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const mgr = new EnemyManager(() => groundRoute, airRoute, economy);
     const enemy = mgr.spawn("soldier");
     enemy.takeDamage(enemy.maxHp); // kill it
     mgr.update(1 / 60);
@@ -176,7 +176,7 @@ describe("Enemy death explosions", () => {
 
   it("does not explode when an enemy reaches the base (leak)", () => {
     const economy = new Economy(0, 20);
-    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const mgr = new EnemyManager(() => groundRoute, airRoute, economy);
     mgr.spawn("tank");
     for (let t = 0; t < 60; t += 1 / 60) mgr.update(1 / 60);
     expect(mgr.getParticles().length).toBe(0);
@@ -184,7 +184,7 @@ describe("Enemy death explosions", () => {
 
   it("removes particles after their lifetime", () => {
     const economy = new Economy(0, 20);
-    const mgr = new EnemyManager(groundRoute, airRoute, economy);
+    const mgr = new EnemyManager(() => groundRoute, airRoute, economy);
     const enemy = mgr.spawn("tank");
     enemy.takeDamage(enemy.maxHp);
     mgr.update(1 / 60);

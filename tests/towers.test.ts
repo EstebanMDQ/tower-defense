@@ -4,7 +4,11 @@ import { TowerManager, pierceHits } from "../src/systems/TowerManager";
 import { acquireTarget } from "../src/systems/TargetingSystem";
 import { EnemyManager } from "../src/systems/EnemyManager";
 import { Economy } from "../src/systems/Economy";
-import { generateMap, isBuildable } from "../src/systems/PathGenerator";
+import {
+  generateMap,
+  isBuildable,
+  sampleGroundRoute,
+} from "../src/systems/PathGenerator";
 import { TOWERS } from "../src/config/towers";
 import { GRID } from "../src/config/grid";
 import type { Enemy } from "../src/entities/Enemy";
@@ -157,7 +161,7 @@ describe("TowerManager placement and upgrade", () => {
     const map = generateMap(7);
     const economy = new Economy(money, 20);
     const enemies = new EnemyManager(
-      map.path.map((t) => ({ x: t.col, y: t.row })),
+      () => sampleGroundRoute(map),
       airRoute,
       economy,
     );
@@ -175,7 +179,7 @@ describe("TowerManager placement and upgrade", () => {
 
   it("rejects placement on the path and on occupied tiles", () => {
     const { map, economy, towers } = setup();
-    const pathTile = map.path[3];
+    const pathTile = map.spine[3];
     expect(towers.place("machineGun", pathTile)).toBeNull();
     expect(economy.getMoney()).toBe(1000); // no charge
 
@@ -221,7 +225,7 @@ describe("Combat integration", () => {
     const map = generateMap(7);
     const economy = new Economy(1000, 20);
     const enemies = new EnemyManager(
-      [
+      () => [
         { x: 100, y: 100 },
         { x: 100, y: 400 },
       ],
@@ -250,7 +254,7 @@ describe("Mortar blast effect", () => {
     const map = generateMap(7);
     const economy = new Economy(1000, 20);
     const enemies = new EnemyManager(
-      [
+      () => [
         { x: 100, y: 100 },
         { x: 100, y: 400 },
       ],

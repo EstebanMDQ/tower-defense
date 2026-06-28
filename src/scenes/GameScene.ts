@@ -1,6 +1,10 @@
 import Phaser from "phaser";
 import { GRID, tileToPixel, pixelToTile, inBounds } from "../config/grid";
-import { generateMap, type GameMap } from "../systems/PathGenerator";
+import {
+  generateMap,
+  sampleGroundRoute,
+  type GameMap,
+} from "../systems/PathGenerator";
 import { randomSeed } from "../systems/Rng";
 import { Economy } from "../systems/Economy";
 import { EnemyManager } from "../systems/EnemyManager";
@@ -50,11 +54,12 @@ export class GameScene extends Phaser.Scene {
     this.map = generateMap(randomSeed());
     this.economy = new Economy();
 
-    const groundRoute: Vec2[] = this.map.path.map((t) =>
-      tileToPixel(t.col, t.row),
-    );
     const airRoute: Vec2[] = [this.map.airRoute.from, this.map.airRoute.to];
-    this.enemyManager = new EnemyManager(groundRoute, airRoute, this.economy);
+    this.enemyManager = new EnemyManager(
+      () => sampleGroundRoute(this.map),
+      airRoute,
+      this.economy,
+    );
     this.towerManager = new TowerManager(
       this.map,
       this.economy,
@@ -153,21 +158,20 @@ export class GameScene extends Phaser.Scene {
       g.lineBetween(0, y, GRID.cols * GRID.tileSize, y);
     }
 
-    // Path tiles + centerline.
+    // Lane tiles (all branches) + edges so forks are visible.
     const half = GRID.tileSize / 2;
     g.fillStyle(0x394b59, 1);
-    for (const t of this.map.path) {
-      const p = tileToPixel(t.col, t.row);
+    for (const k of this.map.pathKeys) {
+      const [c, r] = k.split(",").map(Number);
+      const p = tileToPixel(c, r);
       g.fillRect(p.x - half, p.y - half, GRID.tileSize, GRID.tileSize);
     }
     g.lineStyle(4, 0x5a7186, 1);
-    g.beginPath();
-    this.map.path.forEach((t, i) => {
-      const p = tileToPixel(t.col, t.row);
-      if (i === 0) g.moveTo(p.x, p.y);
-      else g.lineTo(p.x, p.y);
-    });
-    g.strokePath();
+    for (const [from, to] of this.map.edges) {
+      const a = tileToPixel(from.col, from.row);
+      const b = tileToPixel(to.col, to.row);
+      g.lineBetween(a.x, a.y, b.x, b.y);
+    }
 
     // Portal and Base.
     const portal = tileToPixel(this.map.portal.col, this.map.portal.row);

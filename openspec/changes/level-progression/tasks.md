@@ -2,38 +2,38 @@
 
 ## 1. Branching path generator
 
-- [ ] 1.1 Extend `PathGenerator`/`GameMap` to a directed graph (nodes = tiles, edges
+- [x] 1.1 Extend `PathGenerator`/`GameMap` to a directed graph (nodes = tiles, edges
       downstream) from Portal to Base; generate the linear spine, then add
       `branchesForLevel(level)` short detours that re-merge or reach the Base
-- [ ] 1.2 Add config: `MAX_BRANCHES` (4), `MIN_BUILDABLE_FRACTION` (0.35), and
+- [x] 1.2 Add config: `MAX_BRANCHES` (4), `MIN_BUILDABLE_FRACTION` (0.35), and
       `branchesForLevel(level) = clamp(level - 1, 0, MAX_BRANCHES)`
-- [ ] 1.3 Keep generation deterministic for a given seed + level; bounded re-roll
+- [x] 1.3 Keep generation deterministic for a given seed + level; bounded re-roll
       that falls back to fewer forks and ultimately the linear spine
-- [ ] 1.4 Enforce the minimum buildable area; expose `pathKeys` (all lane tiles),
+- [x] 1.4 Enforce the minimum buildable area; expose `pathKeys` (all lane tiles),
       `edges` (for rendering), and `isBuildable`
-- [ ] 1.5 Add `sampleGroundRoute(rng)` returning a pixel-space route, choosing a
+- [x] 1.5 Add `sampleGroundRoute(rng)` returning a pixel-space route, choosing a
       random branch at each fork
 
 ## 2. Enemies on branching paths
 
-- [ ] 2.1 Construct `EnemyManager` with a `sampleGroundRoute` callback (+ air route);
+- [x] 2.1 Construct `EnemyManager` with a `sampleGroundRoute` callback (+ air route);
       sample a fresh route per ground enemy at spawn; planes unchanged
-- [ ] 2.2 Add `setRoutes(sampleGroundRoute, airRoute)` so the manager can be
+- [x] 2.2 Add `setRoutes(sampleGroundRoute, airRoute)` so the manager can be
       re-pointed at a new map without rebuilding
 
 ## 3. Rendering
 
-- [ ] 3.1 In `GameScene`, draw all lane tiles and every edge (so forks are visible);
+- [x] 3.1 In `GameScene`, draw all lane tiles and every edge (so forks are visible);
       Portal/Base markers unchanged
 
 ## 4. Stage A verification
 
-- [ ] 4.1 Unit test: same seed + level reproduces the same graph; higher level has
+- [x] 4.1 Unit test: same seed + level reproduces the same graph; higher level has
       >= forks; level 1 is linear
-- [ ] 4.2 Unit test: every sampled route reaches the Base via valid edges; on a
+- [x] 4.2 Unit test: every sampled route reaches the Base via valid edges; on a
       forked map, multiple distinct routes occur
-- [ ] 4.3 Unit test: buildable count >= the minimum fraction across many seeds
-- [ ] 4.4 Typecheck, tests, build pass; forks visible and enemies diverge in-game
+- [x] 4.3 Unit test: buildable count >= the minimum fraction across many seeds
+- [x] 4.4 Typecheck, tests, build pass; forks visible and enemies diverge in-game
 
 ## Stage B - Levels and progression
 

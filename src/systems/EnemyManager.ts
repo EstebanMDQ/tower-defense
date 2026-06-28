@@ -35,14 +35,27 @@ export class EnemyManager {
   onLeak?: () => void;
 
   constructor(
-    private readonly groundRoute: Vec2[],
-    private readonly airRoute: Vec2[],
+    private sampleGroundRoute: () => Vec2[],
+    private airRoute: Vec2[],
     private readonly economy: Economy,
   ) {}
 
-  /** Spawn an enemy. When `wave` is given, it carries that wave's appearance variant. */
+  /** Re-point the manager at a new map's routes (e.g. on a level transition). */
+  setRoutes(sampleGroundRoute: () => Vec2[], airRoute: Vec2[]): void {
+    this.sampleGroundRoute = sampleGroundRoute;
+    this.airRoute = airRoute;
+  }
+
+  /** Remove all live enemies and effects. */
+  clear(): void {
+    this.enemies = [];
+    this.particles = [];
+  }
+
+  /** Spawn an enemy. Ground enemies get a freshly sampled route through the path
+   *  (a random branch at each fork); planes fly the straight air route. */
   spawn(type: EnemyType, hpScale = 1, wave?: number): Enemy {
-    const route = type === "plane" ? this.airRoute : this.groundRoute;
+    const route = type === "plane" ? this.airRoute : this.sampleGroundRoute();
     const enemy = new Enemy(type, route, hpScale);
     if (wave !== undefined) enemy.variant = this.variantFor(type, wave);
     this.enemies.push(enemy);

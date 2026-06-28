@@ -11,27 +11,44 @@ import { mulberry32 } from "./Rng";
 
 export interface GameMap {
   seed: number;
+  level: number;
   /** Single spawn tile on the top row; start of the path. */
   portal: TileCoord;
   /** Single goal tile on the bottom row; end of the path. */
   base: TileCoord;
-  /** Ordered, 4-connected waypoints from portal to base. */
-  path: TileCoord[];
-  /** Fast lookup of path-tile membership. */
+  /** The main lane (the random-walk spine). */
+  spine: TileCoord[];
+  /** All lane tiles (spine + branch tiles). */
   pathKeys: Set<string>;
+  /** Directed edges (from -> to) for rendering all lanes. */
+  edges: Array<[TileCoord, TileCoord]>;
+  /** Downstream adjacency for route sampling: tile key -> next tiles. */
+  adjacency: Map<string, TileCoord[]>;
   /** Straight-line air route between portal and base tile centers. */
   airRoute: { from: Vec2; to: Vec2 };
 }
 
-/** Path must be at least this multiple of the straight-line portal->base distance. */
 const MIN_LENGTH_FACTOR = 1.5;
-const MAX_ATTEMPTS = 50;
+const MAX_ATTEMPTS = 60;
+/** Maximum branch forks added to a map. */
+export const MAX_BRANCHES = 4;
+/** At least this fraction of the non-portal/base tiles must stay buildable. */
+export const MIN_BUILDABLE_FRACTION = 0.35;
+
+/** Number of branch forks for a level: linear at level 1, +1 per level, capped. */
+export function branchesForLevel(level: number): number {
+  return Math.max(0, Math.min(level - 1, MAX_BRANCHES));
+}
 
 function key(col: number, row: number): string {
   return `${col},${row}`;
 }
 
-/** A tile is buildable if it is in bounds and not the path, portal, or base. */
+function tkey(t: TileCoord): string {
+  return key(t.col, t.row);
+}
+
+/** A tile is buildable if it is in bounds and not a lane tile, portal, or base. */
 export function isBuildable(map: GameMap, col: number, row: number): boolean {
   if (!inBounds(col, row)) return false;
   if (col === map.portal.col && row === map.portal.row) return false;
@@ -39,40 +56,133 @@ export function isBuildable(map: GameMap, col: number, row: number): boolean {
   return !map.pathKeys.has(key(col, row));
 }
 
+/** Count buildable tiles on a map. */
+export function buildableCount(map: GameMap): number {
+  let n = 0;
+  for (let r = 0; r < GRID.rows; r++) {
+    for (let c = 0; c < GRID.cols; c++) if (isBuildable(map, c, r)) n++;
+  }
+  return n;
+}
+
 /**
- * Generate a play field deterministically from a seed. Uses a guided random walk
- * (downward-biased, never revisiting a tile) that always reaches the bottom row;
- * the base is wherever it arrives. Falls back to a serpentine if no attempt meets
- * the minimum-length constraint, so generation always terminates.
+ * Generate a branching play field deterministically from a seed and level. A
+ * downward random-walk spine is generated (re-rolled until it is valid and leaves
+ * enough buildable room, else a short straight fallback), then `branchesForLevel`
+ * diamond detours are added at path corners as forks that re-merge downstream.
  */
-export function generateMap(seed: number): GameMap {
+export function generateMap(seed: number, level = 1): GameMap {
   const rng = mulberry32(seed);
   const portalCol = Math.floor(rng() * GRID.cols);
   const portal: TileCoord = { col: portalCol, row: PORTAL_ROW };
 
-  let path: TileCoord[] | null = null;
+  const minBuildable = Math.floor(
+    MIN_BUILDABLE_FRACTION * (GRID.cols * GRID.rows - 2),
+  );
+  // Reserve room for the diamonds too, so the final map still clears the minimum.
+  const maxSpine = GRID.cols * GRID.rows - minBuildable - MAX_BRANCHES;
+
+  let spine: TileCoord[] | null = null;
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const candidate = walk(rng, portal);
-    if (meetsMinLength(candidate)) {
-      path = candidate;
+    if (meetsMinLength(candidate) && candidate.length <= maxSpine) {
+      spine = candidate;
       break;
     }
   }
-  if (!path) path = serpentine(portal);
+  if (!spine) spine = straightDown(portal); // short fallback - lots of buildable
 
-  const base = path[path.length - 1];
-  const pathKeys = new Set(path.map((t) => key(t.col, t.row)));
+  const base = spine[spine.length - 1];
+  const pathKeys = new Set(spine.map(tkey));
+  const edges: Array<[TileCoord, TileCoord]> = [];
+  const adjacency = new Map<string, TileCoord[]>();
+  const addEdge = (from: TileCoord, to: TileCoord) => {
+    const k = tkey(from);
+    const list = adjacency.get(k);
+    if (list) list.push(to);
+    else adjacency.set(k, [to]);
+    edges.push([from, to]);
+  };
+
+  for (let i = 0; i < spine.length - 1; i++) addEdge(spine[i], spine[i + 1]);
+
+  addBranches(spine, branchesForLevel(level), rng, pathKeys, addEdge);
+
   const airRoute = {
     from: tileToPixel(portal.col, portal.row),
     to: tileToPixel(base.col, base.row),
   };
-  return { seed, portal, base, path, pathKeys, airRoute };
+  return { seed, level, portal, base, spine, pathKeys, edges, adjacency, airRoute };
+}
+
+/**
+ * Add up to `count` diamond detours at path corners. At a corner A->S->B (an L
+ * turn), the opposite square corner D = A + B - S is a tile adjacent to both A and
+ * B; routing A->D->B forks at A and merges at B. Only free, in-bounds tiles are used.
+ */
+function addBranches(
+  spine: TileCoord[],
+  count: number,
+  rng: () => number,
+  pathKeys: Set<string>,
+  addEdge: (from: TileCoord, to: TileCoord) => void,
+): void {
+  if (count <= 0) return;
+  const candidates: { a: TileCoord; b: TileCoord; d: TileCoord }[] = [];
+  for (let i = 1; i < spine.length - 1; i++) {
+    const a = spine[i - 1];
+    const s = spine[i];
+    const b = spine[i + 1];
+    // Skip straight segments (only corners host a diamond).
+    const colinear =
+      (s.col - a.col) * (b.row - a.row) - (s.row - a.row) * (b.col - a.col) === 0;
+    if (colinear) continue;
+    const d: TileCoord = { col: a.col + b.col - s.col, row: a.row + b.row - s.row };
+    if (!inBounds(d.col, d.row)) continue;
+    if (pathKeys.has(tkey(d))) continue;
+    candidates.push({ a, b, d });
+  }
+
+  // Deterministic shuffle, then take valid candidates whose D is still free.
+  shuffle(candidates, rng);
+  let added = 0;
+  for (const c of candidates) {
+    if (added >= count) break;
+    if (pathKeys.has(tkey(c.d))) continue; // taken by an earlier diamond
+    pathKeys.add(tkey(c.d));
+    addEdge(c.a, c.d);
+    addEdge(c.d, c.b);
+    added++;
+  }
+}
+
+function shuffle<T>(arr: T[], rng: () => number): void {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+/** Sample a full ground route portal -> base, choosing randomly at each fork. */
+export function sampleGroundRoute(map: GameMap): Vec2[] {
+  let cur = map.portal;
+  const route: Vec2[] = [tileToPixel(cur.col, cur.row)];
+  let guard = 0;
+  while (
+    !(cur.col === map.base.col && cur.row === map.base.row) &&
+    guard++ < GRID.cols * GRID.rows
+  ) {
+    const next = map.adjacency.get(tkey(cur));
+    if (!next || next.length === 0) break;
+    cur = next[Math.floor(Math.random() * next.length)];
+    route.push(tileToPixel(cur.col, cur.row));
+  }
+  return route;
 }
 
 /**
  * Downward-biased random walk. Moving up is never allowed, so the tile below is
- * always unvisited and the walk always reaches the bottom row without getting
- * stuck. Horizontal moves add length and snaking.
+ * always unvisited and the walk always reaches the bottom row.
  */
 function walk(rng: () => number, portal: TileCoord): TileCoord[] {
   const visited = new Set<string>([key(portal.col, portal.row)]);
@@ -82,7 +192,6 @@ function walk(rng: () => number, portal: TileCoord): TileCoord[] {
 
   while (row < BASE_ROW) {
     const moves: TileCoord[] = [];
-    // Bias downward by weighting it twice.
     const down = { col, row: row + 1 };
     moves.push(down, down);
     if (col > 0 && !visited.has(key(col - 1, row))) {
@@ -106,34 +215,11 @@ function meetsMinLength(path: TileCoord[]): boolean {
   return path.length - 1 >= minSteps;
 }
 
-/** Guaranteed-valid fallback: a serpentine sweep from the portal to the bottom. */
-function serpentine(portal: TileCoord): TileCoord[] {
+/** Short, guaranteed-valid fallback: straight down the portal column. */
+function straightDown(portal: TileCoord): TileCoord[] {
   const path: TileCoord[] = [];
-  let col = portal.col;
-  let row = portal.row;
-  path.push({ col, row });
-  // Slide to the left edge along the top row.
-  while (col > 0) {
-    col--;
-    path.push({ col, row });
-  }
-  // Snake downward, sweeping fully across each new row.
-  let movingRight = true;
-  while (row < BASE_ROW) {
-    row++;
-    path.push({ col, row });
-    if (movingRight) {
-      while (col < GRID.cols - 1) {
-        col++;
-        path.push({ col, row });
-      }
-    } else {
-      while (col > 0) {
-        col--;
-        path.push({ col, row });
-      }
-    }
-    movingRight = !movingRight;
+  for (let row = portal.row; row <= BASE_ROW; row++) {
+    path.push({ col: portal.col, row });
   }
   return path;
 }
