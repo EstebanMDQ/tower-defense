@@ -1,0 +1,9 @@
+{
+  "name": "Tower Defense",
+  "short_name": "TowerDef",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#0d1b2a",
+  "theme_color": "#0d1b2a"
+}

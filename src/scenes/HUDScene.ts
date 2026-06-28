@@ -77,6 +77,7 @@ export class HUDScene extends Phaser.Scene {
   private sellButton!: Button;
   private pauseButton!: Button;
   private speedButton!: Button;
+  private fullscreenButton!: Button;
 
   constructor() {
     super("HUD");
@@ -99,19 +100,27 @@ export class HUDScene extends Phaser.Scene {
       ...labelStyle,
       color: "#ffd166",
     });
-    this.livesText = this.add.text(120, top + 8, "", {
+    this.livesText = this.add.text(104, top + 8, "", {
       ...labelStyle,
       color: "#ef476f",
     });
-    this.waveText = this.add.text(224, top + 8, "", labelStyle);
+    this.waveText = this.add.text(186, top + 8, "", labelStyle);
 
-    // Pause / speed controls.
-    this.pauseButton = new Button(this, 318, top + 4, 52, 24, "Pause", () => {
+    // Pause / speed / fullscreen controls.
+    this.pauseButton = new Button(this, 252, top + 4, 46, 24, "Pause", () => {
       this.gameScene.paused = !this.gameScene.paused;
     });
-    this.speedButton = new Button(this, 376, top + 4, 48, 24, "1x", () => {
+    this.speedButton = new Button(this, 302, top + 4, 36, 24, "1x", () => {
       this.gameScene.speedFactor = this.gameScene.speedFactor === 1 ? 2 : 1;
     });
+    this.fullscreenButton = new Button(this, 342, top + 4, 66, 24, "Full", () => {
+      this.scale.toggleFullscreen();
+    });
+    // The Fullscreen API is unavailable on iOS Safari; hide the button there
+    // (those users use Add to Home Screen instead).
+    if (!this.scale.fullscreen.available) {
+      this.fullscreenButton.setVisible(false);
+    }
 
     // Tower palette.
     const paletteY = top + 38;
@@ -211,5 +220,6 @@ export class HUDScene extends Phaser.Scene {
 
     this.pauseButton.setText(game.paused ? "Resume" : "Pause");
     this.speedButton.setText(`${game.speedFactor}x`);
+    this.fullscreenButton.setText(this.scale.isFullscreen ? "Exit" : "Full");
   }
 }

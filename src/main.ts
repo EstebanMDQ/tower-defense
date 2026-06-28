@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { DESIGN_WIDTH, TOTAL_HEIGHT } from "./config/grid";
+import { initWakeLock } from "./wakeLock";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
@@ -20,3 +21,6 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 new Phaser.Game(config);
+
+// Re-acquire the screen wake lock whenever the page returns to the foreground.
+initWakeLock();

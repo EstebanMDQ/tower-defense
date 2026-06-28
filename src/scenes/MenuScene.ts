@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { DESIGN_WIDTH, TOTAL_HEIGHT } from "../config/grid";
+import { requestWakeLock } from "../wakeLock";
 
 /** Title screen. Tap (or press space) to start a run. */
 export class MenuScene extends Phaser.Scene {
@@ -29,7 +30,14 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    const start = () => this.scene.start("Game");
+    // Fullscreen and wake lock both require a user gesture - the start tap is it.
+    const start = () => {
+      void requestWakeLock();
+      if (this.scale.fullscreen.available && !this.scale.isFullscreen) {
+        this.scale.startFullscreen();
+      }
+      this.scene.start("Game");
+    };
     this.input.once("pointerdown", start);
     this.input.keyboard?.once("keydown-SPACE", start);
   }
