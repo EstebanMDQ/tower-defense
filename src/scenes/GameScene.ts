@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { GRID, tileToPixel } from "../config/grid";
 import { generateMap, type GameMap } from "../systems/PathGenerator";
 import { randomSeed } from "../systems/Rng";
+import { Economy } from "../systems/Economy";
 
 /**
  * The world scene: owns the play field and the gameplay update loop. Later
@@ -10,6 +11,7 @@ import { randomSeed } from "../systems/Rng";
  */
 export class GameScene extends Phaser.Scene {
   map!: GameMap;
+  economy!: Economy;
 
   constructor() {
     super("Game");
@@ -17,6 +19,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.map = generateMap(randomSeed());
+    this.economy = new Economy();
 
     // Run the HUD as a parallel overlay scene.
     this.scene.launch("HUD");
