@@ -21,20 +21,37 @@
         margin: 0;
         padding: 0;
         height: 100%;
-        background: #1a1a1a;
+        background: #0d1b2a;
         overflow: hidden;
       }
-      #game {
+      /*
+        #safe fills the screen but keeps its content inside the device safe area:
+        - 100dvh uses the dynamic viewport height, so it excludes the iOS Safari
+          toolbars (fixes HUD buttons hidden behind the bottom bar).
+        - env(safe-area-inset-*) padding keeps content clear of the notch and the
+          home indicator (fixes the portal hidden under the notch).
+      */
+      #safe {
         width: 100vw;
         height: 100vh;
+        height: 100dvh;
+        padding: env(safe-area-inset-top) env(safe-area-inset-right)
+          env(safe-area-inset-bottom) env(safe-area-inset-left);
+        box-sizing: border-box;
         display: flex;
         align-items: center;
         justify-content: center;
       }
+      #game {
+        width: 100%;
+        height: 100%;
+      }
     </style>
   </head>
   <body>
-    <div id="game"></div>
+    <div id="safe">
+      <div id="game"></div>
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

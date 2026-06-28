@@ -16,6 +16,8 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: DESIGN_WIDTH,
     height: TOTAL_HEIGHT,
+    // Fit within the safe-area wrapper (#game) rather than forcing it to 100%.
+    expandParent: false,
   },
   scene: [BootScene, MenuScene, GameScene, HUDScene, GameOverScene],
 };
