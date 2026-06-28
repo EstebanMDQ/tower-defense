@@ -69,7 +69,8 @@ export function buildableCount(map: GameMap): number {
  * Generate a branching play field deterministically from a seed and level. A
  * downward random-walk spine is generated (re-rolled until it is valid and leaves
  * enough buildable room, else a short straight fallback), then `branchesForLevel`
- * diamond detours are added at path corners as forks that re-merge downstream.
+ * parallel-bypass detours are added around vertical runs as forks that re-merge
+ * downstream, with a one-tile gap between the two lanes.
  */
 export function generateMap(seed: number, level = 1): GameMap {
   const rng = mulberry32(seed);
@@ -106,7 +107,7 @@ export function generateMap(seed: number, level = 1): GameMap {
 
   for (let i = 0; i < spine.length - 1; i++) addEdge(spine[i], spine[i + 1]);
 
-  addBranches(spine, branchesForLevel(level), rng, pathKeys, addEdge);
+  addBranches(spine, branchesForLevel(level), rng, pathKeys, addEdge, minBuildable);
 
   const airRoute = {
     from: tileToPixel(portal.col, portal.row),
@@ -116,9 +117,12 @@ export function generateMap(seed: number, level = 1): GameMap {
 }
 
 /**
- * Add up to `count` diamond detours at path corners. At a corner A->S->B (an L
- * turn), the opposite square corner D = A + B - S is a tile adjacent to both A and
- * B; routing A->D->B forks at A and merges at B. Only free, in-bounds tiles are used.
+ * Add up to `count` parallel-bypass detours around vertical spine runs. For a
+ * downward run from A=(c,r0) to B=(c,r2), the bypass runs in column c+2*dir, joined
+ * by short connectors in column c+dir - so the two lanes are two columns apart with
+ * an empty gap column between them. Forks at A, merges at B. Only free, in-bounds
+ * tiles are used, and a branch is skipped if it would breach the minimum buildable
+ * area.
  */
 function addBranches(
   spine: TileCoord[],
@@ -126,34 +130,72 @@ function addBranches(
   rng: () => number,
   pathKeys: Set<string>,
   addEdge: (from: TileCoord, to: TileCoord) => void,
+  minBuildable: number,
 ): void {
   if (count <= 0) return;
-  const candidates: { a: TileCoord; b: TileCoord; d: TileCoord }[] = [];
-  for (let i = 1; i < spine.length - 1; i++) {
-    const a = spine[i - 1];
-    const s = spine[i];
-    const b = spine[i + 1];
-    // Skip straight segments (only corners host a diamond).
-    const colinear =
-      (s.col - a.col) * (b.row - a.row) - (s.row - a.row) * (b.col - a.col) === 0;
-    if (colinear) continue;
-    const d: TileCoord = { col: a.col + b.col - s.col, row: a.row + b.row - s.row };
-    if (!inBounds(d.col, d.row)) continue;
-    if (pathKeys.has(tkey(d))) continue;
-    candidates.push({ a, b, d });
+  const total = GRID.cols * GRID.rows;
+
+  const candidates: { a: TileCoord; b: TileCoord; tiles: TileCoord[] }[] = [];
+  let i = 0;
+  while (i < spine.length) {
+    let j = i;
+    while (
+      j + 1 < spine.length &&
+      spine[j + 1].col === spine[i].col &&
+      spine[j + 1].row === spine[j].row + 1
+    ) {
+      j++;
+    }
+    if (j - i >= 2) {
+      // A vertical run of at least 3 tiles can host a gapped bypass.
+      const c = spine[i].col;
+      const r0 = spine[i].row;
+      const r2 = spine[j].row;
+      for (const dir of [-1, 1]) {
+        const tiles = bypassTiles(c, r0, r2, dir);
+        if (tiles && tiles.every((t) => !pathKeys.has(tkey(t)))) {
+          candidates.push({ a: spine[i], b: spine[j], tiles });
+        }
+      }
+    }
+    i = j + 1;
   }
 
-  // Deterministic shuffle, then take valid candidates whose D is still free.
   shuffle(candidates, rng);
   let added = 0;
-  for (const c of candidates) {
+  for (const cand of candidates) {
     if (added >= count) break;
-    if (pathKeys.has(tkey(c.d))) continue; // taken by an earlier diamond
-    pathKeys.add(tkey(c.d));
-    addEdge(c.a, c.d);
-    addEdge(c.d, c.b);
+    if (!cand.tiles.every((t) => !pathKeys.has(tkey(t)))) continue; // overlaps an earlier branch
+    if (total - (pathKeys.size + cand.tiles.length) < minBuildable) continue; // keep room
+    addEdge(cand.a, cand.tiles[0]);
+    for (let k = 0; k < cand.tiles.length - 1; k++) {
+      addEdge(cand.tiles[k], cand.tiles[k + 1]);
+    }
+    addEdge(cand.tiles[cand.tiles.length - 1], cand.b);
+    for (const t of cand.tiles) pathKeys.add(tkey(t));
     added++;
   }
+}
+
+/**
+ * Tiles of a parallel bypass around the vertical run (c, r0..r2), offset by `dir`:
+ * a connector at column c+dir, the parallel lane down column c+2*dir, and a closing
+ * connector - leaving column c+dir empty between the connectors (the gap). Excludes
+ * the shared endpoints A and B. Returns null if it would leave the grid.
+ */
+function bypassTiles(
+  c: number,
+  r0: number,
+  r2: number,
+  dir: number,
+): TileCoord[] | null {
+  const c1 = c + dir;
+  const c2 = c + 2 * dir;
+  if (c1 < 0 || c1 >= GRID.cols || c2 < 0 || c2 >= GRID.cols) return null;
+  const tiles: TileCoord[] = [{ col: c1, row: r0 }];
+  for (let row = r0; row <= r2; row++) tiles.push({ col: c2, row });
+  tiles.push({ col: c1, row: r2 });
+  return tiles;
 }
 
 function shuffle<T>(arr: T[], rng: () => number): void {

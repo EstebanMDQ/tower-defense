@@ -99,6 +99,30 @@ describe("sampleGroundRoute", () => {
     expect(route[route.length - 1]).toEqual(baseCenter);
   });
 
+  it("leaves a gap between the spine and a branch lane", () => {
+    let map: GameMap | null = null;
+    for (let seed = 0; seed < 200 && !map; seed++) {
+      const m = generateMap(seed, 5);
+      if (forkCount(m) > 0) map = m;
+    }
+    expect(map).not.toBeNull();
+    const spineSet = new Set(map!.spine.map((t) => `${t.col},${t.row}`));
+    const branchTiles = [...map!.pathKeys].filter((k) => !spineSet.has(k));
+    expect(branchTiles.length).toBeGreaterThan(0);
+    // At least one branch tile is not 4-adjacent to any spine tile (a true gap,
+    // not a detour pressed against the spine).
+    const hasGap = branchTiles.some((k) => {
+      const [c, r] = k.split(",").map(Number);
+      return ![
+        [c + 1, r],
+        [c - 1, r],
+        [c, r + 1],
+        [c, r - 1],
+      ].some(([nc, nr]) => spineSet.has(`${nc},${nr}`));
+    });
+    expect(hasGap).toBe(true);
+  });
+
   it("varies across forks", () => {
     // Find a forked map.
     let map: GameMap | null = null;
