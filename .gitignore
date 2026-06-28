@@ -1,0 +1,15 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Local editor / tooling
+.DS_Store
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# Logs
+*.log
+npm-debug.log*
