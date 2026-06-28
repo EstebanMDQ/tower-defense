@@ -1,21 +1,28 @@
 import Phaser from "phaser";
-import { GRID, BASE_ROW, PORTAL_ROW, tileToPixel } from "../config/grid";
+import { GRID, tileToPixel } from "../config/grid";
+import { generateMap, type GameMap } from "../systems/PathGenerator";
+import { randomSeed } from "../systems/Rng";
 
 /**
  * The world scene: owns the play field and the gameplay update loop. Later
- * changes attach the map, entities, and systems here. For now it draws the grid
- * and the Base/Portal markers to prove rendering and the coordinate system work.
+ * changes attach entities and systems here. It generates the procedural map and
+ * renders the grid, path, and Base/Portal markers.
  */
 export class GameScene extends Phaser.Scene {
+  map!: GameMap;
+
   constructor() {
     super("Game");
   }
 
   create(): void {
+    this.map = generateMap(randomSeed());
+
     // Run the HUD as a parallel overlay scene.
     this.scene.launch("HUD");
+
     this.drawGrid();
-    this.drawLandmarks();
+    this.drawMap();
   }
 
   /** Advance gameplay systems by elapsed seconds (frame-rate independent). */
@@ -43,18 +50,34 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private drawLandmarks(): void {
-    const mid = Math.floor(GRID.cols / 2);
-    const portal = tileToPixel(mid, PORTAL_ROW);
-    const base = tileToPixel(mid, BASE_ROW);
-    const half = GRID.tileSize / 2 - 4;
-
+  private drawMap(): void {
     const g = this.add.graphics();
-    // Portal (enemy spawn) - magenta.
+    const half = GRID.tileSize / 2;
+
+    // Path tiles.
+    g.fillStyle(0x394b59, 1);
+    for (const t of this.map.path) {
+      const p = tileToPixel(t.col, t.row);
+      g.fillRect(p.x - half, p.y - half, GRID.tileSize, GRID.tileSize);
+    }
+
+    // Path centerline.
+    g.lineStyle(4, 0x5a7186, 1);
+    g.beginPath();
+    this.map.path.forEach((t, i) => {
+      const p = tileToPixel(t.col, t.row);
+      if (i === 0) g.moveTo(p.x, p.y);
+      else g.lineTo(p.x, p.y);
+    });
+    g.strokePath();
+
+    // Portal (enemy spawn) and Base (defender goal).
+    const portal = tileToPixel(this.map.portal.col, this.map.portal.row);
+    const base = tileToPixel(this.map.base.col, this.map.base.row);
+    const r = half - 4;
     g.fillStyle(0xc44dff, 1);
-    g.fillCircle(portal.x, portal.y, half);
-    // Base (defender goal) - green.
+    g.fillCircle(portal.x, portal.y, r);
     g.fillStyle(0x4dff88, 1);
-    g.fillRect(base.x - half, base.y - half, half * 2, half * 2);
+    g.fillRect(base.x - r, base.y - r, r * 2, r * 2);
   }
 }
