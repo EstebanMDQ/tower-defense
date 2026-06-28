@@ -8,6 +8,7 @@ import {
   hpScale,
   spawnInterval,
   clearBonus,
+  perfectionBonus,
   WAVES,
 } from "../src/config/waves";
 import { EnemyManager } from "../src/systems/EnemyManager";
@@ -148,7 +149,36 @@ describe("WaveManager", () => {
     expect(enemies.isEmpty()).toBe(true);
     // All 8 soldiers reached the base (lives cost 1 each) -> 20 - 8 = 12.
     expect(economy.getLives()).toBe(12);
-    // Clear bonus for wave 1 = 27 (no kills, so no kill rewards).
-    expect(economy.getMoney()).toBe(clearBonus(1));
+    // Clear bonus (27) + leaked perfect-clear bonus (3), no kills.
+    expect(economy.getMoney()).toBe(clearBonus(1) + perfectionBonus(false));
+  });
+
+  it("grants the perfect bonus for an untouched wave, reduced for a leaked one", () => {
+    // Untouched: kill every enemy before it reaches the base.
+    const a = setup();
+    a.waves.startWave();
+    let guard = 0;
+    while (!(a.waves.getWave() === 1 && a.waves.getPhase() === "build") && guard < 6000) {
+      a.waves.update(1 / 60);
+      // Kill any spawned enemy immediately so none leak.
+      for (const e of a.enemies.getEnemies()) e.takeDamage(e.maxHp);
+      a.enemies.update(1 / 60);
+      guard++;
+    }
+    expect(a.economy.getLives()).toBe(20); // untouched
+    // clear bonus + 10 perfect, plus kill rewards (8 soldiers * 1).
+    expect(a.economy.getMoney()).toBe(clearBonus(1) + perfectionBonus(true) + 8);
+
+    // Leaked: let them through.
+    const b = setup();
+    b.waves.startWave();
+    guard = 0;
+    while (!(b.waves.getWave() === 1 && b.waves.getPhase() === "build") && guard < 6000) {
+      b.waves.update(1 / 60);
+      b.enemies.update(1 / 60);
+      guard++;
+    }
+    expect(b.economy.getLives()).toBeLessThan(20); // leaked
+    expect(b.economy.getMoney()).toBe(clearBonus(1) + perfectionBonus(false));
   });
 });

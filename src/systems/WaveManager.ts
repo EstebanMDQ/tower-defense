@@ -4,6 +4,7 @@ import {
   clearBonus,
   enemyCount,
   hpScale,
+  perfectionBonus,
   spawnInterval,
 } from "../config/waves";
 import type { EnemyType } from "../config/enemies";
@@ -58,6 +59,8 @@ export class WaveManager {
   private spawnTimer = 0;
   private interval = 0;
   private hp = 1;
+  /** Lives at the start of the active wave, to detect an untouched clear. */
+  private livesAtWaveStart = 0;
   /** Seconds left in the build phase before the next wave auto-starts. */
   private prepRemaining: number = WAVES.initialPrep;
 
@@ -91,6 +94,7 @@ export class WaveManager {
     this.hp = hpScale(this.wave);
     this.interval = spawnInterval(this.wave);
     this.spawnTimer = 0; // first enemy spawns on the next update
+    this.livesAtWaveStart = this.economy.getLives();
     this.setPhase("active");
   }
 
@@ -113,6 +117,9 @@ export class WaveManager {
 
     if (this.queue.length === 0 && this.enemyManager.isEmpty()) {
       this.economy.earn(clearBonus(this.wave));
+      // Perfect-clear bonus: lives only drop via leaks, so unchanged = untouched.
+      const untouched = this.economy.getLives() === this.livesAtWaveStart;
+      this.economy.earn(perfectionBonus(untouched));
       this.prepRemaining = WAVES.betweenWaves;
       this.setPhase("build");
     }

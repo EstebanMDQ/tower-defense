@@ -9,7 +9,16 @@ export const WAVES = {
   initialPrep: 12,
   /** Build window between waves before the next auto-starts. */
   betweenWaves: 6,
+  /** Bonus for clearing a wave untouched (no enemy reached the base). */
+  perfectBonus: 10,
+  /** Bonus for clearing a wave that leaked at least one enemy. */
+  leakedBonus: 3,
 } as const;
+
+/** Perfect-clear bonus: more for an untouched wave than a leaked one. */
+export function perfectionBonus(untouched: boolean): number {
+  return untouched ? WAVES.perfectBonus : WAVES.leakedBonus;
+}
 
 /** Number of enemies in a wave. */
 export function enemyCount(wave: number): number {
